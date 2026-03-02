@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Build & Test
+    name: Build & Test (.NET)
     runs-on: ubuntu-latest
 
     steps:
@@ -27,3 +27,23 @@ jobs:
 
       - name: Test
         run: dotnet test BlazorMemory.sln --no-build --configuration Release --verbosity normal
+
+  js-tests:
+    name: Test (JavaScript)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Vitest
+        working-directory: src/BlazorMemory.Storage.IndexedDb/wwwroot/js
+        run: npm init -y && npm install --save-dev vitest
+
+      - name: Run JS tests
+        working-directory: src/BlazorMemory.Storage.IndexedDb/wwwroot/js
+        run: npx vitest run
