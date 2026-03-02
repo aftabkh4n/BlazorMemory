@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BlazorMemory.Core\BlazorMemory.Core.csproj" />
+    <ProjectReference Include="..\..\src\BlazorMemory.Storage.IndexedDb\BlazorMemory.Storage.IndexedDb.csproj" />
+    <ProjectReference Include="..\..\src\BlazorMemory.Embeddings.OpenAi\BlazorMemory.Embeddings.OpenAi.csproj" />
+    <ProjectReference Include="..\..\src\BlazorMemory.Extractor.OpenAi\BlazorMemory.Extractor.OpenAi.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.0" PrivateAssets="all" />
+    <PackageReference Include="OpenAI" Version="2.1.0" />
+  </ItemGroup>
+
+</Project>

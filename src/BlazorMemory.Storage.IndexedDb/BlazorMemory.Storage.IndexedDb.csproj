@@ -24,11 +24,8 @@
   </ItemGroup>
 
   <!--
-    This ensures the JS file is included as a static web asset so it can be
-    loaded via <script> or JSInterop in the host Blazor WASM app.
+    The wwwroot folder is automatically picked up as static web assets
+    by the Razor SDK — no manual StaticWebAsset declaration needed.
   -->
-  <ItemGroup>
-    <StaticWebAsset Include="wwwroot\js\blazorMemory.js" />
-  </ItemGroup>
 
 </Project>
