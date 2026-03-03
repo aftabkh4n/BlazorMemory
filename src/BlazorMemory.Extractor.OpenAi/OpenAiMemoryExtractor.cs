@@ -13,24 +13,39 @@ namespace BlazorMemory.Extractor.OpenAi;
 
 public sealed class OpenAiExtractorOptions
 {
-    public required string ApiKey { get; set; }
+    /// <summary>
+    /// Can be empty at startup — the user enters it via the UI.
+    /// The client is created lazily on first use.
+    /// </summary>
+    public string ApiKey { get; set; } = string.Empty;
 
-    /// <summary>Chat model to use. Defaults to gpt-4o-mini (fast, cheap, great for structured output).</summary>
+    /// <summary>Chat model to use. Defaults to gpt-4o-mini.</summary>
     public string Model { get; set; } = "gpt-4o-mini";
 }
 
 /// <summary>
 /// Fact extractor and consolidation engine backed by OpenAI chat models.
+/// The OpenAI client is created lazily so the app can start before the
+/// user has entered their API key.
 /// </summary>
 public sealed class OpenAiMemoryExtractor : IMemoryExtractor
 {
-    private readonly ChatClient _client;
+    private readonly OpenAiExtractorOptions _options;
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
 
     public OpenAiMemoryExtractor(IOptions<OpenAiExtractorOptions> options)
     {
-        var openAiClient = new OpenAIClient(options.Value.ApiKey);
-        _client = openAiClient.GetChatClient(options.Value.Model);
+        _options = options.Value;
+        // Do NOT create the OpenAI client here — key may be empty at startup
+    }
+
+    private ChatClient CreateClient()
+    {
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+            throw new InvalidOperationException(
+                "OpenAI API key is not configured. Enter your key in the app config panel.");
+
+        return new OpenAIClient(_options.ApiKey).GetChatClient(_options.Model);
     }
 
     /// <inheritdoc />
@@ -38,13 +53,14 @@ public sealed class OpenAiMemoryExtractor : IMemoryExtractor
         string conversation,
         CancellationToken ct = default)
     {
+        var client = CreateClient();
         var messages = new List<ChatMessage>
         {
             new SystemChatMessage(ExtractionPrompts.BuildExtractionSystemPrompt()),
             new UserChatMessage(ExtractionPrompts.BuildExtractionUserPrompt(conversation))
         };
 
-        var response = await _client.CompleteChatAsync(messages, cancellationToken: ct);
+        var response = await client.CompleteChatAsync(messages, cancellationToken: ct);
         var raw = response.Value.Content[0].Text.Trim();
 
         try
@@ -53,7 +69,6 @@ public sealed class OpenAiMemoryExtractor : IMemoryExtractor
         }
         catch
         {
-            // If the model returned something malformed, return empty rather than crash.
             return [];
         }
     }
@@ -67,6 +82,7 @@ public sealed class OpenAiMemoryExtractor : IMemoryExtractor
         if (similarMemories.Count == 0)
             return ConsolidationDecision.Add();
 
+        var client = CreateClient();
         var existing = similarMemories.Select(m => (m.Id, m.Content));
 
         var messages = new List<ChatMessage>
@@ -75,7 +91,7 @@ public sealed class OpenAiMemoryExtractor : IMemoryExtractor
             new UserChatMessage(ExtractionPrompts.BuildConsolidationUserPrompt(newFact, existing))
         };
 
-        var response = await _client.CompleteChatAsync(messages, cancellationToken: ct);
+        var response = await client.CompleteChatAsync(messages, cancellationToken: ct);
         var raw = response.Value.Content[0].Text.Trim();
 
         return ParseDecision(raw);
@@ -90,14 +106,14 @@ public sealed class OpenAiMemoryExtractor : IMemoryExtractor
 
             return action switch
             {
-                "ADD"    => ConsolidationDecision.Add(),
-                "NONE"   => ConsolidationDecision.None(),
+                "ADD" => ConsolidationDecision.Add(),
+                "NONE" => ConsolidationDecision.None(),
                 "UPDATE" => ConsolidationDecision.Update(
                                 node!["targetId"]!.GetValue<string>(),
                                 node!["updatedContent"]!.GetValue<string>()),
                 "DELETE" => ConsolidationDecision.Delete(
                                 node!["targetId"]!.GetValue<string>()),
-                _        => ConsolidationDecision.Add()  // safe fallback
+                _ => ConsolidationDecision.Add()
             };
         }
         catch
@@ -118,7 +134,7 @@ public static class OpenAiExtractorExtensions
         builder.Services.Configure<OpenAiExtractorOptions>(o =>
         {
             o.ApiKey = apiKey;
-            o.Model  = model;
+            o.Model = model;
         });
         builder.Services.AddScoped<IMemoryExtractor, OpenAiMemoryExtractor>();
         return builder;

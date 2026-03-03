@@ -10,18 +10,13 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// ── BlazorMemory ──────────────────────────────────────────────────────────────
-// The API key is intentionally read from config so users can set it at runtime.
-// In production you would proxy this through your own backend.
-var openAiKey = builder.Configuration["OpenAI:ApiKey"] ?? string.Empty;
-
+// BlazorMemory — API key starts empty, user enters it in the UI
 builder.Services
     .AddBlazorMemory()
     .UseIndexedDbStorage()
-    .UseOpenAiEmbeddings(openAiKey)
-    .UseOpenAiExtractor(openAiKey);
+    .UseOpenAiEmbeddings(string.Empty)   // lazy — safe with empty key at startup
+    .UseOpenAiExtractor(string.Empty);   // lazy — safe with empty key at startup
 
-// ── App Services ──────────────────────────────────────────────────────────────
 builder.Services.AddScoped<ChatService>();
 
 await builder.Build().RunAsync();

@@ -8,6 +8,9 @@ namespace ChatApp.BlazorWasm.Pages;
 
 public partial class Chat
 {
+    [Inject] private ChatService ChatService { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
     // ── State ─────────────────────────────────────────────────────────────────
     private List<UserMessage> Messages { get; set; } = [];
     private List<MemoryEntry> Memories { get; set; } = [];
@@ -20,7 +23,7 @@ public partial class Chat
     private bool LoadingMemories { get; set; }
     private bool ShowMemoryPanel { get; set; } = true;
     private bool ShowConfig { get; set; }
-    private bool ApiKeySet { get; set; }
+    private bool ApiKeySet => ChatService.HasApiKey;
 
     private ElementReference MessagesRef;
     private ElementReference InputRef;
@@ -61,8 +64,8 @@ public partial class Chat
             var reply = await ChatService.SendAsync(text, Messages);
             Messages.Add(new UserMessage { Role = "assistant", Content = reply });
 
-            // Refresh memory panel after extraction
-            await Task.Delay(1500); // give extraction a moment to complete
+            // Refresh memory panel after a short delay for extraction to complete
+            await Task.Delay(1500);
             await LoadMemoriesAsync();
         }
         catch (Exception ex)
@@ -80,11 +83,8 @@ public partial class Chat
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        // Send on Enter, new line on Shift+Enter
         if (e.Key == "Enter" && !e.ShiftKey)
-        {
             await SendMessage();
-        }
     }
 
     private async Task DeleteMemory(string id)
@@ -120,8 +120,7 @@ public partial class Chat
     {
         if (!string.IsNullOrWhiteSpace(ApiKeyInput))
         {
-            // In a real app you'd store this securely — for demo we just set it on config
-            ApiKeySet = true;
+            ChatService.SetApiKey(ApiKeyInput.Trim());
             ShowConfig = false;
             ErrorMessage = null;
             StateHasChanged();
@@ -132,29 +131,22 @@ public partial class Chat
 
     private static string FormatDate(DateTimeOffset dt)
     {
-        var local = dt.ToLocalTime();
-        var diff = DateTimeOffset.Now - dt;
+        var diff = DateTimeOffset.UtcNow - dt;
         return diff.TotalMinutes < 1 ? "just now"
              : diff.TotalHours < 1 ? $"{(int)diff.TotalMinutes}m ago"
              : diff.TotalDays < 1 ? $"{(int)diff.TotalHours}h ago"
-             : local.ToString("MMM d");
+             : dt.ToLocalTime().ToString("MMM d");
     }
 
     private async Task ScrollToBottomAsync()
     {
-        try
-        {
-            await JS.InvokeVoidAsync("scrollToBottom", MessagesRef);
-        }
-        catch { /* JS not ready yet */ }
+        try { await JS.InvokeVoidAsync("scrollToBottom", MessagesRef); }
+        catch { }
     }
 
     private async Task FocusInputAsync()
     {
-        try
-        {
-            await InputRef.FocusAsync();
-        }
+        try { await InputRef.FocusAsync(); }
         catch { }
     }
 }

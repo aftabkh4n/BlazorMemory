@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+    <PackageReference Include="xunit" Version="2.7.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.7" />
+    <PackageReference Include="FluentAssertions" Version="6.12.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BlazorMemory.Core\BlazorMemory.Core.csproj" />
+    <ProjectReference Include="..\..\src\BlazorMemory.Storage.EfCore\BlazorMemory.Storage.EfCore.csproj" />
+  </ItemGroup>
+
+</Project>
