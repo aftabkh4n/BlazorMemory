@@ -1,85 +1,83 @@
 # BlazorMemory
 
 <p align="center">
-  <img src="docs/assets/logo.png" alt="BlazorMemory Logo" width="120" />
+  <strong>Persistent AI memory for .NET — browser-native, server-ready, no infrastructure required.</strong>
 </p>
 
 <p align="center">
-  <strong>AI memory layer for .NET — runs in the browser, your server, or both.</strong>
-</p>
-
-<p align="center">
-  <a href="https://www.nuget.org/packages/BlazorMemory"><img src="https://img.shields.io/nuget/v/BlazorMemory.svg" alt="NuGet" /></a>
-  <a href="https://www.nuget.org/packages/BlazorMemory"><img src="https://img.shields.io/nuget/dt/BlazorMemory.svg" alt="Downloads" /></a>
-  <a href="https://github.com/yourusername/BlazorMemory/actions"><img src="https://img.shields.io/github/actions/workflow/status/yourusername/BlazorMemory/ci.yml" alt="CI" /></a>
+  <a href="https://www.nuget.org/packages/BlazorMemory"><img src="https://img.shields.io/nuget/v/BlazorMemory.svg?label=nuget&color=004880" alt="NuGet" /></a>
+  <a href="https://www.nuget.org/packages/BlazorMemory"><img src="https://img.shields.io/nuget/dt/BlazorMemory.svg?color=004880" alt="Downloads" /></a>
+  <a href="https://github.com/yourusername/BlazorMemory/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/yourusername/BlazorMemory/ci.yml?label=ci" alt="CI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
 </p>
 
 ---
 
-Composable building blocks for adding persistent AI memory to .NET applications.
+I built this because I wanted to add persistent memory to a Blazor WASM app and every library I found assumed Node.js or Python. There was nothing for .NET, and nothing that ran in the browser without a backend.
 
-**No backend required for Blazor WASM** — memories live in IndexedDB, embeddings are computed via a pluggable provider, and everything stays in the user's browser. Drop in a server-side adapter when you're ready to scale.
+BlazorMemory is a set of NuGet packages that gives your AI app a memory layer. It extracts facts from conversations, deduplicates them intelligently, and finds relevant ones when you need them. In Blazor WASM it runs entirely in the browser using IndexedDB — no server, no database, works offline. On the server side it plugs into EF Core and whatever database you already have.
 
 ```csharp
-// One line setup
-var memory = new MemoryBuilder()
-    .UseIndexedDbStorage()           // runs in the browser
+// Program.cs — Blazor WASM
+builder.Services
+    .AddBlazorMemory()
+    .UseIndexedDbStorage()          // stores everything in the browser
     .UseOpenAiEmbeddings(apiKey)
-    .UseOpenAiExtractor(apiKey)
-    .Build();
-
-// Extract memories from a conversation
-await memory.ExtractAsync(
-    """
-    User: I'm a software engineer at Acme Corp working on backend TypeScript.
-    Assistant: That's great! Do you have any preferred frameworks?
-    User: I love Hono and Drizzle these days.
-    """,
-    userId: "user_123"
-);
-
-// Query relevant memories
-var memories = await memory.QueryAsync("What does the user work on?", userId: "user_123");
-// => ["User is a backend engineer at Acme Corp", "User prefers Hono and Drizzle"]
+    .UseOpenAiExtractor(apiKey);
 ```
 
----
+```razor
+@inject IMemoryService Memory
 
-## Why BlazorMemory?
+@code {
+    async Task OnUserMessage(string message, string reply)
+    {
+        // pull relevant memories before responding
+        var context = await Memory.QueryAsync(message, userId: currentUserId);
 
-Most AI memory libraries (like Recall, Mem0) target Node.js or Python and require a backend server, a vector database, and infrastructure you have to manage.
+        // extract new facts after the exchange
+        await Memory.ExtractAsync($"User: {message}\nAssistant: {reply}", userId: currentUserId);
+    }
+}
+```
 
-**BlazorMemory takes a different approach:**
+## How it works
 
-| Feature | BlazorMemory | Recall / Mem0 |
-|---|---|---|
-| Runs in the browser | ✅ (Blazor WASM + IndexedDB) | ❌ Node.js only |
-| .NET / C# native | ✅ | ❌ |
-| No backend required | ✅ (WASM mode) | ❌ |
-| Offline capable | ✅ | ❌ |
-| Temporal memory (staleness) | ✅ | ❌ |
-| Pluggable DI-first design | ✅ | Partial |
-| Works server-side too | ✅ (EF Core adapter) | ✅ |
+When you call `ExtractAsync()`, two things happen under the hood. First, an LLM reads the conversation and pulls out discrete facts about the user. Then, for each fact, it searches for similar memories you already have and decides what to do — add it as new, update an existing one, delete a contradicted one, or skip it entirely because you already know.
 
----
+```
+New fact:  "User's name is Jonathan"
+Existing:  "User's name is John"  (similarity: 0.91)
 
-## Features
+Decision: UPDATE → "User's name is Jonathan"
+```
 
-- **LLM-powered extraction** — Automatically extract facts from conversations using OpenAI or Azure OpenAI
-- **Intelligent consolidation** — ADD / UPDATE / DELETE / NONE decisions prevent duplicate memories
-- **Vector similarity search** — Find relevant memories semantically, not just by keyword
-- **Temporal awareness** — Track when facts were learned and surface stale memories automatically
-- **Browser-native storage** — IndexedDB adapter for Blazor WASM, no server needed
-- **Pluggable architecture** — Swap storage, embeddings, and extractors via standard DI
-- **TypeScript-inspired, C#-idiomatic** — Familiar concepts, idiomatic .NET interfaces
-- **Microsoft.Extensions.AI compatible** — Works with any `IChatClient` implementation
+This means your memory store stays clean over time instead of accumulating duplicates every conversation.
 
----
+## What makes it different
 
-## Quick Start
+Most AI memory libraries (Recall, Mem0, etc.) are built for Node.js or Python. They require you to spin up a service, connect a vector database, and manage infrastructure. That's fine if you're already doing that — but a lot of .NET apps aren't.
 
-### Blazor WASM (browser, no backend)
+BlazorMemory is just a library. You add the NuGet packages, register a few services in DI, and that's it. No new processes, no new databases unless you want them.
+
+The browser-native piece is genuinely different. Memories live in IndexedDB, cosine similarity search runs in JavaScript against the user's local data, and nothing leaves the device except the OpenAI API calls. If you swap in a local ONNX embedding model (on the roadmap), you can make the whole thing work offline.
+
+There's also one feature I haven't seen elsewhere: staleness scoring. Every memory records when it was learned. You can query with a max age, or ask for a staleness score alongside results, which is useful when you care about whether information is still current.
+
+```csharp
+var memories = await Memory.QueryAsync("Where does the user work?", userId,
+    new QueryOptions
+    {
+        MaxAgeInDays = 90,
+        IncludeStalenessScore = true
+    });
+
+// memories[0].StalenessScore => 0.0 (fresh) to 1.0 (stale)
+```
+
+## Getting started
+
+### Blazor WASM
 
 ```bash
 dotnet add package BlazorMemory
@@ -90,190 +88,139 @@ dotnet add package BlazorMemory.Extractor.OpenAi
 
 ```csharp
 // Program.cs
-builder.Services.AddBlazorMemory(options =>
-{
-    options.UseIndexedDbStorage();
-    options.UseOpenAiEmbeddings(builder.Configuration["OpenAI:ApiKey"]!);
-    options.UseOpenAiExtractor(builder.Configuration["OpenAI:ApiKey"]!);
-});
+builder.Services
+    .AddBlazorMemory()
+    .UseIndexedDbStorage()
+    .UseOpenAiEmbeddings(builder.Configuration["OpenAI:ApiKey"]!)
+    .UseOpenAiExtractor(builder.Configuration["OpenAI:ApiKey"]!);
 ```
 
-```razor
-@inject IMemoryService Memory
-
-@code {
-    protected override async Task OnInitializedAsync()
-    {
-        await Memory.ExtractAsync(conversation, userId: "user_123");
-        var facts = await Memory.QueryAsync("What does the user like?", userId: "user_123");
-    }
-}
-```
-
-### ASP.NET Core / Blazor Server (with EF Core)
+### ASP.NET Core / Blazor Server
 
 ```bash
 dotnet add package BlazorMemory
 dotnet add package BlazorMemory.Storage.EfCore
-dotnet add package BlazorMemory.Embeddings.AzureOpenAi
+dotnet add package BlazorMemory.Embeddings.OpenAi
 dotnet add package BlazorMemory.Extractor.Anthropic
 ```
 
 ```csharp
 // Program.cs
-builder.Services.AddBlazorMemory(options =>
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+builder.Services
+    .AddBlazorMemory()
+    .UseEfCoreStorage<AppDbContext>()
+    .UseOpenAiEmbeddings(builder.Configuration["OpenAI:ApiKey"]!)
+    .UseAnthropicExtractor(builder.Configuration["Anthropic:ApiKey"]!);
+```
+
+Your `AppDbContext` just needs to call `modelBuilder.ApplyBlazorMemoryConfiguration()` in `OnModelCreating` and that's it — BlazorMemory uses your existing database connection.
+
+## The full API
+
+Everything goes through `IMemoryService`:
+
+```csharp
+// Extract facts from a conversation turn (runs extract + consolidate)
+await memory.ExtractAsync(conversationText, userId);
+
+// Semantic search — returns memories ranked by relevance
+var results = await memory.QueryAsync(userMessage, userId, new QueryOptions
 {
-    options.UseEfCoreStorage<AppDbContext>();
-    options.UseAzureOpenAiEmbeddings(builder.Configuration["AzureOpenAI:Endpoint"]!);
-    options.UseAnthropicExtractor(builder.Configuration["Anthropic:ApiKey"]!);
+    Limit = 5,
+    Threshold = 0.7f,          // cosine similarity cutoff
+    MaxAgeInDays = 90,         // optional age filter
+    IncludeStalenessScore = true
 });
+
+// Everything else you'd expect
+var all  = await memory.ListAsync(userId);
+var one  = await memory.GetAsync(id);
+         await memory.UpdateAsync(id, newContent);
+         await memory.DeleteAsync(id);
+         await memory.ClearAsync(userId);
 ```
-
----
-
-## How Memory Consolidation Works
-
-When you call `ExtractAsync()`, BlazorMemory doesn't blindly insert new facts. It runs a two-step LLM process:
-
-1. **Extract** — LLM identifies discrete facts from the conversation
-2. **Consolidate** — For each fact, BlazorMemory:
-   - Searches for similar existing memories via vector similarity
-   - Asks the LLM: `ADD`, `UPDATE`, `DELETE`, or `NONE`
-   - Executes the decision
-
-```
-New fact:    "User's name is Jonathan"
-Existing:    [{ content: "User's name is John", learnedAt: 2024-01-01 }]
-
-LLM Decision: UPDATE → "User's name is Jonathan (updated from John)"
-```
-
----
-
-## Temporal Memory
-
-Unlike other libraries, BlazorMemory tracks **when** facts were learned and can surface staleness:
-
-```csharp
-var memories = await memory.QueryAsync("Where does the user work?", userId: "user_123",
-    options: new QueryOptions
-    {
-        MaxAgeInDays = 90,        // ignore facts older than 90 days
-        IncludeStalenessScore = true
-    });
-
-foreach (var m in memories)
-{
-    Console.WriteLine($"{m.Content} (learned {m.LearnedAt:d}, staleness: {m.StalenessScore:P0})");
-}
-```
-
----
-
-## API Reference
-
-```csharp
-// Core interface
-public interface IMemoryService
-{
-    // Extract and consolidate memories from conversation text
-    Task ExtractAsync(string conversation, string userId, CancellationToken ct = default);
-
-    // Find relevant memories using vector similarity
-    Task<IReadOnlyList<MemoryEntry>> QueryAsync(string context, string userId,
-        QueryOptions? options = null, CancellationToken ct = default);
-
-    // CRUD
-    Task<IReadOnlyList<MemoryEntry>> ListAsync(string userId, CancellationToken ct = default);
-    Task<MemoryEntry?> GetAsync(string id, CancellationToken ct = default);
-    Task UpdateAsync(string id, string content, CancellationToken ct = default);
-    Task DeleteAsync(string id, CancellationToken ct = default);
-    Task ClearAsync(string userId, CancellationToken ct = default);
-}
-```
-
----
 
 ## Packages
 
-### Core
+**Core**
 
 | Package | Description |
 |---|---|
-| `BlazorMemory` | Core interfaces, models, consolidation engine |
+| `BlazorMemory` | Interfaces, consolidation engine, `IMemoryService` |
+| `BlazorMemory.Storage.InMemory` | In-memory store — good for tests and prototyping |
 
-### Storage Adapters
-
-| Package | Description |
-|---|---|
-| `BlazorMemory.Storage.IndexedDb` | Browser IndexedDB via JS Interop (WASM) |
-| `BlazorMemory.Storage.LocalStorage` | Browser localStorage for lightweight use |
-| `BlazorMemory.Storage.EfCore` | EF Core adapter (SQL Server, PostgreSQL, SQLite) |
-| `BlazorMemory.Storage.InMemory` | In-memory adapter for testing |
-
-### Embeddings Providers
+**Storage**
 
 | Package | Description |
 |---|---|
-| `BlazorMemory.Embeddings.OpenAi` | OpenAI text-embedding-3 models |
-| `BlazorMemory.Embeddings.AzureOpenAi` | Azure OpenAI embeddings |
-| `BlazorMemory.Embeddings.Local` | Local ONNX model via ML.NET (offline/private) |
+| `BlazorMemory.Storage.IndexedDb` | Browser IndexedDB via JS interop (Blazor WASM) |
+| `BlazorMemory.Storage.EfCore` | EF Core — SQL Server, PostgreSQL, SQLite |
 
-### Extractors
+**Embeddings**
 
 | Package | Description |
 |---|---|
-| `BlazorMemory.Extractor.OpenAi` | GPT-based fact extraction |
-| `BlazorMemory.Extractor.AzureOpenAi` | Azure OpenAI extractor |
-| `BlazorMemory.Extractor.Anthropic` | Claude-based fact extraction |
+| `BlazorMemory.Embeddings.OpenAi` | OpenAI text-embedding-3-small / large |
 
----
+**Extractors**
+
+| Package | Description |
+|---|---|
+| `BlazorMemory.Extractor.OpenAi` | GPT-4o-mini fact extraction |
+| `BlazorMemory.Extractor.Anthropic` | Claude Haiku / Sonnet fact extraction |
+
+## Running the demo
+
+There's a Blazor WASM sample app in `/samples/ChatApp.BlazorWasm` that shows the whole thing working end-to-end — a chat interface with a live memory panel on the side.
+
+```bash
+cd samples/ChatApp.BlazorWasm
+dotnet run
+```
+
+Open `https://localhost:5001`, paste your OpenAI key in the config panel, and start chatting. Tell it your name, where you work, what you're building. Watch the memory panel fill up. Refresh the page — the memories are still there, stored in your browser's IndexedDB.
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────┐
-│              Your Blazor Application             │
-└──────────────────────────────────────────────────┘
-                         │
-                         ▼
-┌──────────────────────────────────────────────────┐
-│            IMemoryService (BlazorMemory)         │
-│   ExtractAsync()  QueryAsync()  CRUD operations  │
-└──────────────────────────────────────────────────┘
-         │                  │                │
-         ▼                  ▼                ▼
-┌──────────────┐  ┌──────────────────┐  ┌──────────────┐
-│  IExtractor  │  │  IEmbeddings     │  │  IMemoryStore│
-│ OpenAI/Azure │  │  OpenAI/ONNX     │  │ IndexedDB/EF │
-│ /Anthropic   │  │  /AzureOpenAI    │  │ Core/InMemory│
-└──────────────┘  └──────────────────┘  └──────────────┘
+Your Blazor App
+      │
+      ▼
+IMemoryService
+      │
+  ┌───┴──────────────┬───────────────────┐
+  ▼                  ▼                   ▼
+IMemoryExtractor  IEmbeddingsProvider  IMemoryStore
+(OpenAI/Claude)   (OpenAI)             (IndexedDB / EF Core / InMemory)
 ```
 
----
+Every component is swappable. Register your own implementation of any interface and BlazorMemory will use it.
 
 ## Roadmap
 
 - [x] Core interfaces and consolidation engine
-- [ ] IndexedDB storage adapter
-- [ ] OpenAI embeddings and extractor
-- [ ] EF Core storage adapter
-- [ ] Azure OpenAI support
-- [ ] Local ONNX embeddings (offline mode)
-- [ ] Anthropic extractor
-- [ ] Temporal staleness scoring
-- [ ] Sample: Blazor WASM chatbot with memory
-- [ ] Sample: ASP.NET Core API with memory
-- [ ] NuGet publishing + CI pipeline
-
----
+- [x] InMemory storage adapter
+- [x] OpenAI embeddings
+- [x] OpenAI extractor
+- [x] IndexedDB browser storage adapter
+- [x] EF Core storage adapter
+- [x] Anthropic Claude extractor
+- [x] Temporal staleness scoring
+- [x] Blazor WASM sample chatbot
+- [ ] Azure OpenAI embeddings + extractor
+- [ ] Local ONNX embeddings (offline/private mode)
+- [ ] ASP.NET Core API sample
+- [ ] NuGet publish
 
 ## Contributing
 
-Contributions are welcome! Please open an issue first to discuss what you'd like to change.
+Issues and PRs are welcome. If you're adding a new storage adapter or embedding provider, the `IMemoryStore` and `IEmbeddingsProvider` interfaces are the right starting point — look at `BlazorMemory.Storage.InMemory` for the simplest possible reference implementation.
 
----
+For bugs, please include the adapter and provider you're using, and a minimal repro if you can.
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+MIT
