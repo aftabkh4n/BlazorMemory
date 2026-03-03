@@ -29,10 +29,13 @@ jobs:
 
       - name: Pack all packages
         run: |
-          dotnet pack src/BlazorMemory.Core/BlazorMemory.Core.csproj --configuration Release --no-build -o ./nupkgs
-          dotnet pack src/BlazorMemory.Storage.InMemory/BlazorMemory.Storage.InMemory.csproj --configuration Release --no-build -o ./nupkgs
-          dotnet pack src/BlazorMemory.Embeddings.OpenAi/BlazorMemory.Embeddings.OpenAi.csproj --configuration Release --no-build -o ./nupkgs
-          dotnet pack src/BlazorMemory.Extractor.OpenAi/BlazorMemory.Extractor.OpenAi.csproj --configuration Release --no-build -o ./nupkgs
+          dotnet pack src/BlazorMemory.Core/BlazorMemory.Core.csproj                               --configuration Release --no-build -o ./nupkgs
+          dotnet pack src/BlazorMemory.Storage.InMemory/BlazorMemory.Storage.InMemory.csproj       --configuration Release --no-build -o ./nupkgs
+          dotnet pack src/BlazorMemory.Storage.IndexedDb/BlazorMemory.Storage.IndexedDb.csproj     --configuration Release --no-build -o ./nupkgs
+          dotnet pack src/BlazorMemory.Storage.EfCore/BlazorMemory.Storage.EfCore.csproj           --configuration Release --no-build -o ./nupkgs
+          dotnet pack src/BlazorMemory.Embeddings.OpenAi/BlazorMemory.Embeddings.OpenAi.csproj     --configuration Release --no-build -o ./nupkgs
+          dotnet pack src/BlazorMemory.Extractor.OpenAi/BlazorMemory.Extractor.OpenAi.csproj       --configuration Release --no-build -o ./nupkgs
+          dotnet pack src/BlazorMemory.Extractor.Anthropic/BlazorMemory.Extractor.Anthropic.csproj --configuration Release --no-build -o ./nupkgs
 
       - name: Push to NuGet.org
         run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
