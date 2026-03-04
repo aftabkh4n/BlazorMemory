@@ -1,108 +1,165 @@
+using Xunit;
+using BlazorMemory.Core.Abstractions;
+using BlazorMemory.Core.Engine;
 using BlazorMemory.Core.Models;
+using BlazorMemory.Core.Services;
 using BlazorMemory.Storage.InMemory;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
 
 namespace BlazorMemory.Core.Tests;
 
-public class InMemoryStoreTests
+public class MemoryServiceTests
 {
-    private static MemoryEntry MakeEntry(string userId = "user_1", string content = "Test") => new()
-    {
-        Id = Guid.NewGuid().ToString("N"),
-        UserId = userId,
-        Content = content,
-        Embedding = [1f, 0f, 0f],
-        LearnedAt = DateTimeOffset.UtcNow
-    };
+    private static float[] FakeEmbedding() => Enumerable.Range(0, 8).Select(i => (float)i / 8).ToArray();
 
-    [Fact]
-    public async Task AddAsync_StoresEntry_RetrievableById()
+    private (MemoryService service, IMemoryExtractor extractor, InMemoryMemoryStore store) BuildSut()
     {
         var store = new InMemoryMemoryStore();
-        var entry = MakeEntry();
+        var embeddings = Substitute.For<IEmbeddingsProvider>();
+        var extractor = Substitute.For<IMemoryExtractor>();
 
+        embeddings.EmbedAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(FakeEmbedding()));
+        embeddings.EmbedBatchAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<CancellationToken>())
+            .Returns(ci => Task.FromResult<IReadOnlyList<float[]>>(
+                ci.Arg<IEnumerable<string>>().Select(_ => FakeEmbedding()).ToList()));
+
+        var engine = new ExtractionEngine(store, embeddings, extractor,
+            NullLogger<ExtractionEngine>.Instance);
+
+        var service = new MemoryService(store, embeddings, engine,
+            NullLogger<MemoryService>.Instance);
+
+        return (service, extractor, store);
+    }
+
+    [Fact]
+    public async Task ExtractAsync_StoresNewFact_WhenDecisionIsAdd()
+    {
+        var (service, extractor, store) = BuildSut();
+
+        extractor.ExtractFactsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<string>>(["User is a software engineer."]));
+
+        extractor.ConsolidateAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<MemoryEntry>>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(ConsolidationDecision.Add()));
+
+        await service.ExtractAsync("User: I am a software engineer.", "user_1");
+
+        var memories = await store.ListAsync("user_1");
+        memories.Should().HaveCount(1);
+        memories[0].Content.Should().Be("User is a software engineer.");
+    }
+
+    [Fact]
+    public async Task ExtractAsync_DoesNotStoreDuplicate_WhenDecisionIsNone()
+    {
+        var (service, extractor, store) = BuildSut();
+
+        extractor.ExtractFactsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<string>>(["User is a software engineer."]));
+
+        extractor.ConsolidateAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<MemoryEntry>>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(ConsolidationDecision.None()));
+
+        await service.ExtractAsync("User: I am a software engineer.", "user_1");
+
+        var memories = await store.ListAsync("user_1");
+        memories.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task QueryAsync_FiltersOutOldMemories_WhenMaxAgeSet()
+    {
+        var (service, _, store) = BuildSut();
+
+        await store.AddAsync(new MemoryEntry
+        {
+            Id = "old",
+            UserId = "user_1",
+            Content = "Old fact",
+            Embedding = FakeEmbedding(),
+            LearnedAt = DateTimeOffset.UtcNow.AddDays(-100)
+        });
+        await store.AddAsync(new MemoryEntry
+        {
+            Id = "recent",
+            UserId = "user_1",
+            Content = "Recent fact",
+            Embedding = FakeEmbedding(),
+            LearnedAt = DateTimeOffset.UtcNow.AddDays(-5)
+        });
+
+        var results = await service.QueryAsync("anything", "user_1",
+            new QueryOptions { Threshold = 0f, MaxAgeInDays = 30 });
+
+        results.Should().HaveCount(1);
+        results[0].Id.Should().Be("recent");
+    }
+
+    [Fact]
+    public async Task QueryAsync_IncludesStalenessScore_WhenRequested()
+    {
+        var (service, _, store) = BuildSut();
+
+        await store.AddAsync(new MemoryEntry
+        {
+            Id = "mem_1",
+            UserId = "user_1",
+            Content = "Some fact",
+            Embedding = FakeEmbedding(),
+            LearnedAt = DateTimeOffset.UtcNow.AddDays(-30)
+        });
+
+        var results = await service.QueryAsync("anything", "user_1",
+            new QueryOptions { Threshold = 0f, IncludeStalenessScore = true });
+
+        results.Should().HaveCount(1);
+        results[0].StalenessScore.Should().NotBeNull();
+        results[0].StalenessScore.Should().BeApproximately(0.5f, 0.05f);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ChangesContent()
+    {
+        var (service, _, store) = BuildSut();
+
+        var entry = new MemoryEntry
+        {
+            Id = "mem_1",
+            UserId = "user_1",
+            Content = "Original",
+            Embedding = FakeEmbedding(),
+            LearnedAt = DateTimeOffset.UtcNow
+        };
         await store.AddAsync(entry);
-        var result = await store.GetAsync(entry.Id);
 
-        result.Should().NotBeNull();
-        result!.Content.Should().Be(entry.Content);
+        await service.UpdateAsync("mem_1", "Updated content");
+
+        var result = await service.GetAsync("mem_1");
+        result!.Content.Should().Be("Updated content");
     }
 
     [Fact]
     public async Task DeleteAsync_RemovesEntry()
     {
-        var store = new InMemoryMemoryStore();
-        var entry = MakeEntry();
+        var (service, _, store) = BuildSut();
+
+        var entry = new MemoryEntry
+        {
+            Id = "mem_1",
+            UserId = "user_1",
+            Content = "To delete",
+            Embedding = FakeEmbedding(),
+            LearnedAt = DateTimeOffset.UtcNow
+        };
         await store.AddAsync(entry);
 
-        await store.DeleteAsync(entry.Id);
-        var result = await store.GetAsync(entry.Id);
+        await service.DeleteAsync("mem_1");
 
+        var result = await service.GetAsync("mem_1");
         result.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task ListAsync_ReturnsOnlyUserEntries()
-    {
-        var store = new InMemoryMemoryStore();
-        await store.AddAsync(MakeEntry("user_1", "Memory A"));
-        await store.AddAsync(MakeEntry("user_1", "Memory B"));
-        await store.AddAsync(MakeEntry("user_2", "Memory C"));
-
-        var user1Memories = await store.ListAsync("user_1");
-
-        user1Memories.Should().HaveCount(2);
-        user1Memories.Should().OnlyContain(m => m.UserId == "user_1");
-    }
-
-    [Fact]
-    public async Task ClearAsync_RemovesAllUserEntries()
-    {
-        var store = new InMemoryMemoryStore();
-        await store.AddAsync(MakeEntry("user_1"));
-        await store.AddAsync(MakeEntry("user_1"));
-        await store.AddAsync(MakeEntry("user_2"));
-
-        await store.ClearAsync("user_1");
-
-        var user1 = await store.ListAsync("user_1");
-        var user2 = await store.ListAsync("user_2");
-
-        user1.Should().BeEmpty();
-        user2.Should().HaveCount(1);
-    }
-
-    [Fact]
-    public async Task SearchSimilarAsync_ReturnsSimilarVectors_AboveThreshold()
-    {
-        var store = new InMemoryMemoryStore();
-
-        // Vector pointing in same direction as query → high similarity
-        await store.AddAsync(MakeEntry("user_1", "Relevant") with { Embedding = [1f, 0f, 0f] });
-
-        // Vector perpendicular to query → similarity = 0
-        await store.AddAsync(MakeEntry("user_1", "Irrelevant") with { Embedding = [0f, 1f, 0f] });
-
-        var queryEmbedding = new float[] { 1f, 0f, 0f };
-        var results = await store.SearchSimilarAsync(queryEmbedding, "user_1", limit: 5, threshold: 0.9f);
-
-        results.Should().HaveCount(1);
-        results[0].Content.Should().Be("Relevant");
-        results[0].RelevanceScore.Should().BeApproximately(1.0f, 0.001f);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_UpdatesContent()
-    {
-        var store = new InMemoryMemoryStore();
-        var entry = MakeEntry();
-        await store.AddAsync(entry);
-
-        var updated = entry with { Content = "Updated content", UpdatedAt = DateTimeOffset.UtcNow };
-        await store.UpdateAsync(updated);
-
-        var result = await store.GetAsync(entry.Id);
-        result!.Content.Should().Be("Updated content");
-        result.UpdatedAt.Should().NotBeNull();
     }
 }

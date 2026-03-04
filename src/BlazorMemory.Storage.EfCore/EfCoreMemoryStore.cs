@@ -45,10 +45,10 @@ public sealed class EfCoreMemoryStore<TContext> : IMemoryStore
 
         if (entity is null) return;
 
-        entity.Content       = entry.Content;
+        entity.Content = entry.Content;
         entity.EmbeddingJson = SerializeEmbedding(entry.Embedding);
-        entity.UpdatedAt     = entry.UpdatedAt ?? DateTimeOffset.UtcNow;
-        entity.MetadataJson  = JsonSerializer.Serialize(entry.Metadata, JsonOpts);
+        entity.UpdatedAt = entry.UpdatedAt ?? DateTimeOffset.UtcNow;
+        entity.MetadataJson = JsonSerializer.Serialize(entry.Metadata, JsonOpts);
 
         await _db.SaveChangesAsync(ct);
     }
@@ -81,7 +81,7 @@ public sealed class EfCoreMemoryStore<TContext> : IMemoryStore
             .OrderByDescending(e => e.UpdatedAt ?? e.LearnedAt)
             .ToListAsync(ct);
 
-        return entities.Select(ToDomain).ToList();
+        return entities.Select(e => ToDomain(e)).ToList();
     }
 
     /// <inheritdoc />
@@ -132,24 +132,24 @@ public sealed class EfCoreMemoryStore<TContext> : IMemoryStore
 
     private static MemoryEntryEntity ToEntity(MemoryEntry m) => new()
     {
-        Id            = m.Id,
-        UserId        = m.UserId,
-        Content       = m.Content,
+        Id = m.Id,
+        UserId = m.UserId,
+        Content = m.Content,
         EmbeddingJson = SerializeEmbedding(m.Embedding),
-        LearnedAt     = m.LearnedAt,
-        UpdatedAt     = m.UpdatedAt,
-        MetadataJson  = JsonSerializer.Serialize(m.Metadata, JsonOpts)
+        LearnedAt = m.LearnedAt,
+        UpdatedAt = m.UpdatedAt,
+        MetadataJson = JsonSerializer.Serialize(m.Metadata, JsonOpts)
     };
 
     private static MemoryEntry ToDomain(MemoryEntryEntity e, float[]? embedding = null) => new()
     {
-        Id        = e.Id,
-        UserId    = e.UserId,
-        Content   = e.Content,
+        Id = e.Id,
+        UserId = e.UserId,
+        Content = e.Content,
         Embedding = embedding ?? DeserializeEmbedding(e.EmbeddingJson),
         LearnedAt = e.LearnedAt,
         UpdatedAt = e.UpdatedAt,
-        Metadata  = JsonSerializer.Deserialize<Dictionary<string, string>>(e.MetadataJson, JsonOpts) ?? []
+        Metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(e.MetadataJson, JsonOpts) ?? []
     };
 
     private static string SerializeEmbedding(float[] embedding) =>

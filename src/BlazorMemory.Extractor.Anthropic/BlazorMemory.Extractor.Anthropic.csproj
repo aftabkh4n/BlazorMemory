@@ -1,22 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <PackageId>BlazorMemory.Extractor.Anthropic</PackageId>
-    <Version>0.1.0</Version>
-    <Description>Claude-powered fact extractor and memory consolidator for BlazorMemory. Uses Anthropic's Claude models via the official .NET SDK.</Description>
-    <PackageTags>blazor;anthropic;claude;ai;memory;llm</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/yourusername/BlazorMemory</RepositoryUrl>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
-    <PackageReference Include="Anthropic.SDK" Version="3.10.1" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
-  </ItemGroup>
-
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<PackageId>BlazorMemory.Extractor.Anthropic</PackageId>
+		<Version>0.1.0</Version>
+		<Description>Claude-powered fact extractor and memory consolidator for BlazorMemory. Uses Anthropic's Claude models via the official .NET SDK.</Description>
+		<PackageTags>blazor;anthropic;claude;ai;memory;llm</PackageTags>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<RepositoryUrl>https://github.com/yourusername/BlazorMemory</RepositoryUrl>
+	</PropertyGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
+		<PackageReference Include="Anthropic.SDK" Version="4.1.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+	</ItemGroup>
 </Project>

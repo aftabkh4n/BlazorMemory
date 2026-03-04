@@ -1,3 +1,4 @@
+using Xunit;
 using BlazorMemory.Core.Models;
 using BlazorMemory.Extractor.Anthropic;
 using FluentAssertions;
@@ -17,14 +18,14 @@ public class AnthropicExtractorTests
 
     private static MemoryEntry MakeMemory(string id, string content) => new()
     {
-        Id        = id,
-        UserId    = "user_1",
-        Content   = content,
+        Id = id,
+        UserId = "user_1",
+        Content = content,
         Embedding = [0.1f, 0.2f],
         LearnedAt = DateTimeOffset.UtcNow
     };
 
-    // ── Option Validation Tests ───────────────────────────────────────────────
+    // ── Option Validation Tests ────────────────────────────────────────────────
 
     [Fact]
     public async Task ExtractFactsAsync_Throws_WhenApiKeyEmpty()
@@ -40,8 +41,6 @@ public class AnthropicExtractorTests
     [Fact]
     public async Task ConsolidateAsync_ReturnsAdd_WhenNoSimilarMemories()
     {
-        // When there are no similar memories, should always return Add
-        // without making any API call
         var extractor = BuildExtractor();
 
         var decision = await extractor.ConsolidateAsync(
@@ -51,7 +50,7 @@ public class AnthropicExtractorTests
         decision.Action.Should().Be(ConsolidationAction.Add);
     }
 
-    // ── Default Options Tests ─────────────────────────────────────────────────
+    // ── Default Options Tests ──────────────────────────────────────────────────
 
     [Fact]
     public void DefaultOptions_UseHaikuModel()
@@ -74,7 +73,7 @@ public class AnthropicExtractorTests
         options.MaxTokens.Should().BeGreaterThanOrEqualTo(512);
     }
 
-    // ── DI Registration Tests ─────────────────────────────────────────────────
+    // ── DI Registration Tests ──────────────────────────────────────────────────
 
     [Fact]
     public void UseAnthropicExtractor_RegistersExtractor_WithCorrectKey()
@@ -85,7 +84,7 @@ public class AnthropicExtractorTests
         builder.UseAnthropicExtractor("sk-ant-test-key");
 
         var provider = services.BuildServiceProvider();
-        var options  = provider.GetRequiredService<IOptions<AnthropicExtractorOptions>>();
+        var options = provider.GetRequiredService<IOptions<AnthropicExtractorOptions>>();
 
         options.Value.ApiKey.Should().Be("sk-ant-test-key");
         options.Value.Model.Should().Contain("haiku");
@@ -95,12 +94,12 @@ public class AnthropicExtractorTests
     public void UseAnthropicExtractor_WithSonnet_UsesCorrectModel()
     {
         var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
-        var builder  = new BlazorMemory.Core.Extensions.BlazorMemoryBuilder(services);
+        var builder = new BlazorMemory.Core.Extensions.BlazorMemoryBuilder(services);
 
         builder.UseAnthropicExtractor("sk-ant-test-key", model: "claude-sonnet-4-6");
 
         var provider = services.BuildServiceProvider();
-        var options  = provider.GetRequiredService<IOptions<AnthropicExtractorOptions>>();
+        var options = provider.GetRequiredService<IOptions<AnthropicExtractorOptions>>();
 
         options.Value.Model.Should().Be("claude-sonnet-4-6");
     }

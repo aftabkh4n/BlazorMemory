@@ -1,3 +1,4 @@
+using Xunit;
 using BlazorMemory.Core.Models;
 using BlazorMemory.Storage.EfCore;
 using BlazorMemory.Storage.EfCore.Entities;
@@ -6,10 +7,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BlazorMemory.Storage.EfCore.Tests;
 
-/// <summary>
-/// Integration-style tests for EfCoreMemoryStore using the EF Core InMemory provider.
-/// These tests cover real EF Core operations without needing a live database.
-/// </summary>
 public class EfCoreMemoryStoreTests : IDisposable
 {
     private readonly MemoryDbContext _db;
@@ -18,7 +15,7 @@ public class EfCoreMemoryStoreTests : IDisposable
     public EfCoreMemoryStoreTests()
     {
         var options = new DbContextOptionsBuilder<MemoryDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString()) // fresh DB per test
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
         _db = new MemoryDbContext(options);
@@ -32,13 +29,13 @@ public class EfCoreMemoryStoreTests : IDisposable
         string userId = "user_1",
         string content = "User is a software engineer",
         float[]? embedding = null) => new()
-    {
-        Id        = id,
-        UserId    = userId,
-        Content   = content,
-        Embedding = embedding ?? [1f, 0f, 0f],
-        LearnedAt = DateTimeOffset.UtcNow
-    };
+        {
+            Id = id,
+            UserId = userId,
+            Content = content,
+            Embedding = embedding ?? [1f, 0f, 0f],
+            LearnedAt = DateTimeOffset.UtcNow
+        };
 
     [Fact]
     public async Task AddAsync_PersistsEntry_ToDatabase()
@@ -107,7 +104,7 @@ public class EfCoreMemoryStoreTests : IDisposable
 
         var updated = entry with
         {
-            Content   = "User is a senior software engineer",
+            Content = "User is a senior software engineer",
             Embedding = [0.9f, 0.1f, 0f],
             UpdatedAt = DateTimeOffset.UtcNow
         };
@@ -137,9 +134,7 @@ public class EfCoreMemoryStoreTests : IDisposable
     [Fact]
     public async Task SearchSimilarAsync_ReturnsSimilarEntries_AboveThreshold()
     {
-        // Pointing same direction as query → similarity ≈ 1.0
         await _store.AddAsync(MakeEntry("m1", "user_1", "Relevant", [1f, 0f, 0f]));
-        // Perpendicular → similarity = 0
         await _store.AddAsync(MakeEntry("m2", "user_1", "Irrelevant", [0f, 1f, 0f]));
 
         var results = await _store.SearchSimilarAsync(

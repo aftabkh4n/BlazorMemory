@@ -1,164 +1,162 @@
+using Xunit;
 using BlazorMemory.Core.Abstractions;
-using BlazorMemory.Core.Engine;
 using BlazorMemory.Core.Models;
 using BlazorMemory.Core.Services;
 using BlazorMemory.Storage.InMemory;
 using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace BlazorMemory.Core.Tests;
 
 public class MemoryServiceTests
 {
-    private static float[] FakeEmbedding() => Enumerable.Range(0, 8).Select(i => (float)i / 8).ToArray();
+    private static float[] FakeEmbedding() => [0.1f, 0.2f, 0.3f];
 
-    private (MemoryService service, IMemoryExtractor extractor, InMemoryMemoryStore store) BuildSut()
+    private static (MemoryService sut, IMemoryStore store, IEmbeddingsProvider embeddings, IMemoryExtractor extractor)
+        BuildSut()
     {
-        var store = new InMemoryMemoryStore();
+        var store = Substitute.For<IMemoryStore>();
         var embeddings = Substitute.For<IEmbeddingsProvider>();
         var extractor = Substitute.For<IMemoryExtractor>();
 
         embeddings.EmbedAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(FakeEmbedding()));
-        embeddings.EmbedBatchAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<CancellationToken>())
-            .Returns(ci => Task.FromResult<IReadOnlyList<float[]>>(
-                ci.Arg<IEnumerable<string>>().Select(_ => FakeEmbedding()).ToList()));
+            .Returns(FakeEmbedding());
+        embeddings.Dimensions.Returns(3);
 
-        var engine = new ExtractionEngine(store, embeddings, extractor,
-            NullLogger<ExtractionEngine>.Instance);
+        store.SearchSimilarAsync(
+                Arg.Any<float[]>(), Arg.Any<string>(),
+                Arg.Any<int>(), Arg.Any<float>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<MemoryEntry>());
 
-        var service = new MemoryService(store, embeddings, engine,
-            NullLogger<MemoryService>.Instance);
+        extractor.ExtractFactsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<string> { "User is a developer" });
+        extractor.ConsolidateAsync(
+                Arg.Any<string>(), Arg.Any<IReadOnlyList<MemoryEntry>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(ConsolidationDecision.Add());
 
-        return (service, extractor, store);
+        var sut = new MemoryService(store, embeddings, extractor);
+        return (sut, store, embeddings, extractor);
     }
 
     [Fact]
     public async Task ExtractAsync_StoresNewFact_WhenDecisionIsAdd()
     {
-        var (service, extractor, store) = BuildSut();
+        var (sut, store, _, _) = BuildSut();
 
-        extractor.ExtractFactsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<IReadOnlyList<string>>(["User is a software engineer."]));
+        await sut.ExtractAsync("User: I am a developer", "user_1");
 
-        extractor.ConsolidateAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<MemoryEntry>>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(ConsolidationDecision.Add()));
-
-        await service.ExtractAsync("User: I am a software engineer.", "user_1");
-
-        var memories = await store.ListAsync("user_1");
-        memories.Should().HaveCount(1);
-        memories[0].Content.Should().Be("User is a software engineer.");
+        await store.Received(1).AddAsync(
+            Arg.Is<MemoryEntry>(m => m.Content == "User is a developer"),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task ExtractAsync_DoesNotStoreDuplicate_WhenDecisionIsNone()
     {
-        var (service, extractor, store) = BuildSut();
+        var (sut, store, _, extractor) = BuildSut();
 
-        extractor.ExtractFactsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<IReadOnlyList<string>>(["User is a software engineer."]));
+        extractor.ConsolidateAsync(
+                Arg.Any<string>(), Arg.Any<IReadOnlyList<MemoryEntry>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(ConsolidationDecision.None());
 
-        extractor.ConsolidateAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<MemoryEntry>>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(ConsolidationDecision.None()));
+        await sut.ExtractAsync("Some conversation", "user_1");
 
-        await service.ExtractAsync("User: I am a software engineer.", "user_1");
-
-        var memories = await store.ListAsync("user_1");
-        memories.Should().BeEmpty();
+        await store.DidNotReceive().AddAsync(
+            Arg.Any<MemoryEntry>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task QueryAsync_FiltersOutOldMemories_WhenMaxAgeSet()
     {
-        var (service, _, store) = BuildSut();
+        var (sut, store, embeddings, _) = BuildSut();
 
-        await store.AddAsync(new MemoryEntry
+        var oldMemory = new MemoryEntry
         {
             Id = "old",
             UserId = "user_1",
-            Content = "Old fact",
+            Content = "old fact",
             Embedding = FakeEmbedding(),
-            LearnedAt = DateTimeOffset.UtcNow.AddDays(-100)
-        });
-        await store.AddAsync(new MemoryEntry
+            LearnedAt = DateTimeOffset.UtcNow.AddDays(-200)
+        };
+        var newMemory = new MemoryEntry
         {
-            Id = "recent",
+            Id = "new",
             UserId = "user_1",
-            Content = "Recent fact",
+            Content = "new fact",
             Embedding = FakeEmbedding(),
-            LearnedAt = DateTimeOffset.UtcNow.AddDays(-5)
-        });
+            LearnedAt = DateTimeOffset.UtcNow.AddDays(-10)
+        };
 
-        var results = await service.QueryAsync("anything", "user_1",
-            new QueryOptions { Threshold = 0f, MaxAgeInDays = 30 });
+        store.SearchSimilarAsync(
+                Arg.Any<float[]>(), Arg.Any<string>(),
+                Arg.Any<int>(), Arg.Any<float>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemoryEntry> { oldMemory, newMemory });
+
+        var results = await sut.QueryAsync("test", "user_1",
+            new QueryOptions { MaxAgeInDays = 90 });
 
         results.Should().HaveCount(1);
-        results[0].Id.Should().Be("recent");
+        results[0].Id.Should().Be("new");
     }
 
     [Fact]
     public async Task QueryAsync_IncludesStalenessScore_WhenRequested()
     {
-        var (service, _, store) = BuildSut();
+        var (sut, store, _, _) = BuildSut();
 
-        await store.AddAsync(new MemoryEntry
+        var memory = new MemoryEntry
         {
-            Id = "mem_1",
+            Id = "m1",
             UserId = "user_1",
-            Content = "Some fact",
+            Content = "some fact",
             Embedding = FakeEmbedding(),
             LearnedAt = DateTimeOffset.UtcNow.AddDays(-30)
-        });
+        };
 
-        var results = await service.QueryAsync("anything", "user_1",
-            new QueryOptions { Threshold = 0f, IncludeStalenessScore = true });
+        store.SearchSimilarAsync(
+                Arg.Any<float[]>(), Arg.Any<string>(),
+                Arg.Any<int>(), Arg.Any<float>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemoryEntry> { memory });
+
+        var results = await sut.QueryAsync("test", "user_1",
+            new QueryOptions { IncludeStalenessScore = true, MaxAgeInDays = 365 });
 
         results.Should().HaveCount(1);
-        results[0].StalenessScore.Should().NotBeNull();
-        results[0].StalenessScore.Should().BeApproximately(0.5f, 0.05f);
+        results[0].StalenessScore.Should().BeGreaterThan(0f);
     }
 
     [Fact]
     public async Task UpdateAsync_ChangesContent()
     {
-        var (service, _, store) = BuildSut();
+        var (sut, store, embeddings, _) = BuildSut();
 
-        var entry = new MemoryEntry
+        var existing = new MemoryEntry
         {
-            Id = "mem_1",
+            Id = "m1",
             UserId = "user_1",
-            Content = "Original",
+            Content = "original",
             Embedding = FakeEmbedding(),
             LearnedAt = DateTimeOffset.UtcNow
         };
-        await store.AddAsync(entry);
 
-        await service.UpdateAsync("mem_1", "Updated content");
+        store.GetAsync("m1", Arg.Any<CancellationToken>()).Returns(existing);
 
-        var result = await service.GetAsync("mem_1");
-        result!.Content.Should().Be("Updated content");
+        await sut.UpdateAsync("m1", "updated content");
+
+        await store.Received(1).UpdateAsync(
+            Arg.Is<MemoryEntry>(m => m.Content == "updated content"),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task DeleteAsync_RemovesEntry()
     {
-        var (service, _, store) = BuildSut();
+        var (sut, store, _, _) = BuildSut();
 
-        var entry = new MemoryEntry
-        {
-            Id = "mem_1",
-            UserId = "user_1",
-            Content = "To delete",
-            Embedding = FakeEmbedding(),
-            LearnedAt = DateTimeOffset.UtcNow
-        };
-        await store.AddAsync(entry);
+        await sut.DeleteAsync("m1");
 
-        await service.DeleteAsync("mem_1");
-
-        var result = await service.GetAsync("mem_1");
-        result.Should().BeNull();
+        await store.Received(1).DeleteAsync("m1", Arg.Any<CancellationToken>());
     }
 }

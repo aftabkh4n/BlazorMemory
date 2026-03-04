@@ -1,6 +1,7 @@
-using System.Text.Json;
+using Xunit;
 using BlazorMemory.Core.Models;
 using BlazorMemory.Storage.IndexedDb;
+using BlazorMemory.Storage.IndexedDb.Interop;
 using FluentAssertions;
 using Microsoft.JSInterop;
 using NSubstitute;
@@ -8,105 +9,90 @@ using NSubstitute;
 namespace BlazorMemory.Storage.IndexedDb.Tests;
 
 /// <summary>
-/// Unit tests for IndexedDbMemoryStore.
-/// We mock IJSRuntime and IJSObjectReference so no real browser is needed.
-/// These tests verify that the C# store correctly marshals calls to/from JS.
+/// Tests IndexedDbMemoryStore by injecting a mock IJSRuntime and verifying
+/// that the correct JS interop calls are made.
+/// Requires [InternalsVisibleTo("BlazorMemory.Storage.IndexedDb.Tests")] in the source project.
 /// </summary>
 public class IndexedDbMemoryStoreTests
 {
-    private static readonly JsonSerializerOptions JsonOpts = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
+    private readonly IJSRuntime _jsRuntime;
+    private readonly IJSObjectReference _jsModule;
+    private readonly IndexedDbInterop _interop;
+    private readonly IndexedDbMemoryStore _store;
 
-    private static MemoryEntry MakeEntry(string id = "mem_1", string userId = "user_1") => new()
+    public IndexedDbMemoryStoreTests()
     {
-        Id        = id,
-        UserId    = userId,
-        Content   = "User is a software engineer",
-        Embedding = [0.1f, 0.2f, 0.3f],
-        LearnedAt = new DateTimeOffset(2025, 1, 15, 10, 0, 0, TimeSpan.Zero)
-    };
+        _jsRuntime = Substitute.For<IJSRuntime>();
+        _jsModule = Substitute.For<IJSObjectReference>();
 
-    private (IndexedDbMemoryStore store, IJSObjectReference mockModule) BuildSut()
-    {
-        // Mock the JS module reference
-        var mockModule = Substitute.For<IJSObjectReference>();
-
-        // Mock IJSRuntime to return our mock module when "import" is called
-        var mockJs = Substitute.For<IJSRuntime>();
-        mockJs
+        // Intercept the ES module import that IndexedDbInterop performs lazily
+        ((IJSRuntime)_jsRuntime)
             .InvokeAsync<IJSObjectReference>(
                 "import",
-                Arg.Any<CancellationToken>(),
                 Arg.Any<object[]>())
-            .Returns(ValueTask.FromResult(mockModule));
+            .Returns(new ValueTask<IJSObjectReference>(_jsModule));
 
-        var store = new IndexedDbMemoryStore(mockJs);
-        return (store, mockModule);
+        _interop = new IndexedDbInterop(_jsRuntime);
+        _store = new IndexedDbMemoryStore(_interop);
     }
+
+    private static MemoryEntry MakeEntry(string id = "mem_1") => new()
+    {
+        Id = id,
+        UserId = "user_1",
+        Content = "User likes C#",
+        Embedding = [0.1f, 0.2f, 0.3f],
+        LearnedAt = DateTimeOffset.UtcNow
+    };
 
     [Fact]
     public async Task AddAsync_CallsJsAddEntry_AndReturnsId()
     {
-        var (store, module) = BuildSut();
         var entry = MakeEntry();
 
-        module
-            .InvokeAsync<string>("addEntry", Arg.Any<CancellationToken>(), Arg.Any<object[]>())
-            .Returns(ValueTask.FromResult(entry.Id));
+        _jsModule
+            .InvokeAsync<string>("addEntry", Arg.Any<object[]>())
+            .Returns(new ValueTask<string>(entry.Id));
 
-        var resultId = await store.AddAsync(entry);
+        var result = await _store.AddAsync(entry);
 
-        resultId.Should().Be(entry.Id);
-        await module.Received(1).InvokeAsync<string>(
-            "addEntry", Arg.Any<CancellationToken>(), Arg.Any<object[]>());
+        result.Should().Be(entry.Id);
+        await _jsModule.Received(1).InvokeAsync<string>("addEntry", Arg.Any<object[]>());
     }
 
     [Fact]
     public async Task DeleteAsync_CallsJsDeleteEntry()
     {
-        var (store, module) = BuildSut();
-
-        module
-            .InvokeVoidAsync("deleteEntry", Arg.Any<CancellationToken>(), Arg.Any<object[]>())
+        _jsModule
+            .InvokeVoidAsync("deleteEntry", Arg.Any<object[]>())
             .Returns(ValueTask.CompletedTask);
 
-        await store.DeleteAsync("mem_1");
+        await _store.DeleteAsync("mem_1");
 
-        await module.Received(1).InvokeVoidAsync(
-            "deleteEntry", Arg.Any<CancellationToken>(), Arg.Any<object[]>());
+        await _jsModule.Received(1).InvokeVoidAsync("deleteEntry", Arg.Any<object[]>());
     }
 
     [Fact]
     public async Task GetAsync_ReturnsNull_WhenJsReturnsNull()
     {
-        var (store, module) = BuildSut();
+        _jsModule
+            .InvokeAsync<MemoryEntryDto?>("getEntry", Arg.Any<object[]>())
+            .Returns(new ValueTask<MemoryEntryDto?>(default(MemoryEntryDto)));
 
-        module
-            .InvokeAsync<object?>("getEntry", Arg.Any<CancellationToken>(), Arg.Any<object[]>())
-            .Returns(ValueTask.FromResult<object?>(null));
+        var result = await _store.GetAsync("missing_id");
 
-        // The real interop returns a typed DTO or null — we verify null propagation
-        // by calling the JS mock with a null return
-        var result = await store.GetAsync("nonexistent");
-
-        // Because JS returned null, the store should return null
         result.Should().BeNull();
     }
 
     [Fact]
     public async Task ClearAsync_CallsJsClearEntries()
     {
-        var (store, module) = BuildSut();
-
-        module
-            .InvokeVoidAsync("clearEntries", Arg.Any<CancellationToken>(), Arg.Any<object[]>())
+        _jsModule
+            .InvokeVoidAsync("clearEntries", Arg.Any<object[]>())
             .Returns(ValueTask.CompletedTask);
 
-        await store.ClearAsync("user_1");
+        await _store.ClearAsync("user_1");
 
-        await module.Received(1).InvokeVoidAsync(
-            "clearEntries", Arg.Any<CancellationToken>(), Arg.Any<object[]>());
+        await _jsModule.Received(1).InvokeVoidAsync("clearEntries", Arg.Any<object[]>());
     }
 }

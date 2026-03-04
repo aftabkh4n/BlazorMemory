@@ -13,31 +13,11 @@ namespace BlazorMemory.Extractor.Anthropic;
 
 public sealed class AnthropicExtractorOptions
 {
-    /// <summary>
-    /// Anthropic API key. Can be empty at startup if the user enters it via UI.
-    /// The client is created lazily on first use.
-    /// </summary>
     public string ApiKey { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Claude model to use. Defaults to claude-haiku-4-5 — fast, cheap, great for
-    /// structured JSON tasks. Use claude-sonnet-4-6 for higher quality extraction.
-    /// </summary>
     public string Model { get; set; } = "claude-haiku-4-5-20251001";
-
-    /// <summary>Max tokens for extraction responses. 1024 is plenty for JSON arrays.</summary>
     public int MaxTokens { get; set; } = 1024;
 }
 
-/// <summary>
-/// Claude-powered fact extractor and memory consolidator for BlazorMemory.
-///
-/// Uses Anthropic's Claude models via the official Anthropic.SDK NuGet package.
-/// Claude is particularly well-suited for this task due to its strong
-/// instruction-following and reliable JSON output capabilities.
-///
-/// The client is created lazily so the app can start before the API key is set.
-/// </summary>
 public sealed class AnthropicMemoryExtractor : IMemoryExtractor
 {
     private readonly AnthropicExtractorOptions _options;
@@ -53,11 +33,9 @@ public sealed class AnthropicMemoryExtractor : IMemoryExtractor
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
             throw new InvalidOperationException(
                 "Anthropic API key is not configured. Set AnthropicExtractorOptions.ApiKey.");
-
         return new AnthropicClient(_options.ApiKey);
     }
 
-    /// <inheritdoc />
     public async Task<IReadOnlyList<string>> ExtractFactsAsync(
         string conversation,
         CancellationToken ct = default)
@@ -66,35 +44,27 @@ public sealed class AnthropicMemoryExtractor : IMemoryExtractor
 
         var request = new MessageParameters
         {
-            Model    = _options.Model,
+            Model = _options.Model,
             MaxTokens = _options.MaxTokens,
-            System   = [new SystemMessage(ExtractionPrompts.BuildExtractionSystemPrompt())],
-            Messages =
-            [
-                new Message
-                {
-                    Role    = RoleType.User,
-                    Content = [new TextContent { Text = ExtractionPrompts.BuildExtractionUserPrompt(conversation) }]
-                }
-            ]
+            System = new List<SystemMessage>
+            {
+                new SystemMessage(ExtractionPrompts.BuildExtractionSystemPrompt())
+            },
+            Messages = new List<Message>
+            {
+                new Message(RoleType.User,
+                    ExtractionPrompts.BuildExtractionUserPrompt(conversation))
+            }
         };
 
         var response = await client.Messages.GetClaudeMessageAsync(request, ct);
-        var raw = response.Content.OfType<TextBlock>().FirstOrDefault()?.Text?.Trim() ?? "[]";
+        var raw = response.Message.ToString().Trim()
+            .Replace("```json", "").Replace("```", "").Trim();
 
-        try
-        {
-            // Strip any accidental markdown code fences
-            raw = raw.Replace("```json", "").Replace("```", "").Trim();
-            return JsonSerializer.Deserialize<List<string>>(raw, JsonOpts) ?? [];
-        }
-        catch
-        {
-            return [];
-        }
+        try { return JsonSerializer.Deserialize<List<string>>(raw, JsonOpts) ?? []; }
+        catch { return []; }
     }
 
-    /// <inheritdoc />
     public async Task<ConsolidationDecision> ConsolidateAsync(
         string newFact,
         IReadOnlyList<MemoryEntry> similarMemories,
@@ -108,68 +78,50 @@ public sealed class AnthropicMemoryExtractor : IMemoryExtractor
 
         var request = new MessageParameters
         {
-            Model     = _options.Model,
+            Model = _options.Model,
             MaxTokens = _options.MaxTokens,
-            System    = [new SystemMessage(ExtractionPrompts.BuildConsolidationSystemPrompt())],
-            Messages  =
-            [
-                new Message
-                {
-                    Role    = RoleType.User,
-                    Content = [new TextContent { Text = ExtractionPrompts.BuildConsolidationUserPrompt(newFact, existing) }]
-                }
-            ]
+            System = new List<SystemMessage>
+            {
+                new SystemMessage(ExtractionPrompts.BuildConsolidationSystemPrompt())
+            },
+            Messages = new List<Message>
+            {
+                new Message(RoleType.User,
+                    ExtractionPrompts.BuildConsolidationUserPrompt(newFact, existing))
+            }
         };
 
         var response = await client.Messages.GetClaudeMessageAsync(request, ct);
-        var raw = response.Content.OfType<TextBlock>().FirstOrDefault()?.Text?.Trim() ?? "{}";
+        var raw = response.Message.ToString().Trim()
+            .Replace("```json", "").Replace("```", "").Trim();
 
-        return ParseDecision(raw.Replace("```json", "").Replace("```", "").Trim());
+        return ParseDecision(raw);
     }
-
-    // ── Parsing ───────────────────────────────────────────────────────────────
 
     private static ConsolidationDecision ParseDecision(string json)
     {
         try
         {
-            var node   = JsonNode.Parse(json);
+            var node = JsonNode.Parse(json);
             var action = node?["action"]?.GetValue<string>()?.ToUpperInvariant();
-
             return action switch
             {
-                "ADD"    => ConsolidationDecision.Add(),
-                "NONE"   => ConsolidationDecision.None(),
+                "ADD" => ConsolidationDecision.Add(),
+                "NONE" => ConsolidationDecision.None(),
                 "UPDATE" => ConsolidationDecision.Update(
                                 node!["targetId"]!.GetValue<string>(),
                                 node!["updatedContent"]!.GetValue<string>()),
                 "DELETE" => ConsolidationDecision.Delete(
                                 node!["targetId"]!.GetValue<string>()),
-                _        => ConsolidationDecision.Add()
+                _ => ConsolidationDecision.Add()
             };
         }
-        catch
-        {
-            return ConsolidationDecision.Add();
-        }
+        catch { return ConsolidationDecision.Add(); }
     }
 }
 
-// ── DI Extensions ─────────────────────────────────────────────────────────────
-
 public static class AnthropicExtractorExtensions
 {
-    /// <summary>
-    /// Registers the Anthropic Claude extractor for BlazorMemory.
-    ///
-    /// <code>
-    /// builder.Services
-    ///     .AddBlazorMemory()
-    ///     .UseIndexedDbStorage()
-    ///     .UseOpenAiEmbeddings(openAiKey)
-    ///     .UseAnthropicExtractor(anthropicKey);
-    /// </code>
-    /// </summary>
     public static BlazorMemoryBuilder UseAnthropicExtractor(
         this BlazorMemoryBuilder builder,
         string apiKey,
@@ -178,13 +130,12 @@ public static class AnthropicExtractorExtensions
         builder.Services.Configure<AnthropicExtractorOptions>(o =>
         {
             o.ApiKey = apiKey;
-            o.Model  = model;
+            o.Model = model;
         });
         builder.Services.AddScoped<IMemoryExtractor, AnthropicMemoryExtractor>();
         return builder;
     }
 
-    /// <summary>Configure via options pattern.</summary>
     public static BlazorMemoryBuilder UseAnthropicExtractor(
         this BlazorMemoryBuilder builder,
         Action<AnthropicExtractorOptions> configure)
