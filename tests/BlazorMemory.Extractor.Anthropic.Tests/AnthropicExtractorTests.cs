@@ -1,29 +1,17 @@
 using Xunit;
+using BlazorMemory.Core.Extensions;
 using BlazorMemory.Core.Models;
 using BlazorMemory.Extractor.Anthropic;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace BlazorMemory.Extractor.Anthropic.Tests;
 
-/// <summary>
-/// Unit tests for AnthropicMemoryExtractor.
-/// These test the decision parsing logic and option validation
-/// without making real API calls.
-/// </summary>
 public class AnthropicExtractorTests
 {
     private static AnthropicMemoryExtractor BuildExtractor(string apiKey = "test-key") =>
         new(Options.Create(new AnthropicExtractorOptions { ApiKey = apiKey }));
-
-    private static MemoryEntry MakeMemory(string id, string content) => new()
-    {
-        Id = id,
-        UserId = "user_1",
-        Content = content,
-        Embedding = [0.1f, 0.2f],
-        LearnedAt = DateTimeOffset.UtcNow
-    };
 
     // ── Option Validation Tests ────────────────────────────────────────────────
 
@@ -78,10 +66,9 @@ public class AnthropicExtractorTests
     [Fact]
     public void UseAnthropicExtractor_RegistersExtractor_WithCorrectKey()
     {
-        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
-        var builder = new BlazorMemory.Core.Extensions.BlazorMemoryBuilder(services);
+        var services = new ServiceCollection();
 
-        builder.UseAnthropicExtractor("sk-ant-test-key");
+        services.AddBlazorMemory().UseAnthropicExtractor("sk-ant-test-key");
 
         var provider = services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<AnthropicExtractorOptions>>();
@@ -93,10 +80,9 @@ public class AnthropicExtractorTests
     [Fact]
     public void UseAnthropicExtractor_WithSonnet_UsesCorrectModel()
     {
-        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
-        var builder = new BlazorMemory.Core.Extensions.BlazorMemoryBuilder(services);
+        var services = new ServiceCollection();
 
-        builder.UseAnthropicExtractor("sk-ant-test-key", model: "claude-sonnet-4-6");
+        services.AddBlazorMemory().UseAnthropicExtractor("sk-ant-test-key", model: "claude-sonnet-4-6");
 
         var provider = services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<AnthropicExtractorOptions>>();

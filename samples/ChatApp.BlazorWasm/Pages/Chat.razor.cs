@@ -35,13 +35,14 @@ public partial class Chat
         await LoadMemoriesAsync();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !ApiKeySet)
         {
             ShowConfig = true;
             StateHasChanged();
         }
+        return Task.CompletedTask;
     }
 
     // ── Actions ───────────────────────────────────────────────────────────────

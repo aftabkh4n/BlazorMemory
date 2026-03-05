@@ -10,7 +10,7 @@ using NSubstitute;
 
 namespace BlazorMemory.Core.Tests;
 
-public class MemoryServiceTests
+public class InMemoryStoreTests
 {
     private static float[] FakeEmbedding() => Enumerable.Range(0, 8).Select(i => (float)i / 8).ToArray();
 
@@ -42,7 +42,6 @@ public class MemoryServiceTests
 
         extractor.ExtractFactsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<IReadOnlyList<string>>(["User is a software engineer."]));
-
         extractor.ConsolidateAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<MemoryEntry>>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(ConsolidationDecision.Add()));
 
@@ -60,7 +59,6 @@ public class MemoryServiceTests
 
         extractor.ExtractFactsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<IReadOnlyList<string>>(["User is a software engineer."]));
-
         extractor.ConsolidateAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<MemoryEntry>>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(ConsolidationDecision.None()));
 

@@ -4,6 +4,7 @@ using BlazorMemory.Core.Models;
 using BlazorMemory.Core.Services;
 using BlazorMemory.Storage.InMemory;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace BlazorMemory.Core.Tests;
@@ -35,7 +36,14 @@ public class MemoryServiceTests
                 Arg.Any<CancellationToken>())
             .Returns(ConsolidationDecision.Add());
 
-        var sut = new MemoryService(store, embeddings, extractor);
+        // MemoryService requires ExtractionEngine + ILogger - build them properly
+        var inMemoryStore = new InMemoryMemoryStore();
+        var engine = new BlazorMemory.Core.Engine.ExtractionEngine(
+                                 store, embeddings, extractor,
+                                 NullLogger<BlazorMemory.Core.Engine.ExtractionEngine>.Instance);
+        var sut = new MemoryService(store, embeddings, engine,
+                      NullLogger<MemoryService>.Instance);
+
         return (sut, store, embeddings, extractor);
     }
 
@@ -70,7 +78,7 @@ public class MemoryServiceTests
     [Fact]
     public async Task QueryAsync_FiltersOutOldMemories_WhenMaxAgeSet()
     {
-        var (sut, store, embeddings, _) = BuildSut();
+        var (sut, store, _, _) = BuildSut();
 
         var oldMemory = new MemoryEntry
         {
@@ -130,7 +138,7 @@ public class MemoryServiceTests
     [Fact]
     public async Task UpdateAsync_ChangesContent()
     {
-        var (sut, store, embeddings, _) = BuildSut();
+        var (sut, store, _, _) = BuildSut();
 
         var existing = new MemoryEntry
         {
