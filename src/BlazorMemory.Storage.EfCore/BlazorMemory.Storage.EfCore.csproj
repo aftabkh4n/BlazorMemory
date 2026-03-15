@@ -1,27 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <PackageId>BlazorMemory.Storage.EfCore</PackageId>
-    <Version>0.1.0</Version>
-    <Description>
-      Entity Framework Core storage adapter for BlazorMemory.
-      Supports SQL Server, PostgreSQL (with pgvector), and SQLite.
-      Use this for server-side Blazor and ASP.NET Core applications.
-    </Description>
-    <PackageTags>blazor;efcore;postgresql;sqlserver;sqlite;ai;memory</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/yourusername/BlazorMemory</RepositoryUrl>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
-  </ItemGroup>
-
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<PackageId>BlazorMemory.Storage.EfCore</PackageId>
+		<Version>0.1.0</Version>
+		<Description>Entity Framework Core storage adapter for BlazorMemory. Supports SQL Server, PostgreSQL, and SQLite for server-side Blazor and ASP.NET Core apps.</Description>
+		<PackageTags>blazor;ai;memory;efcore;postgresql;sqlserver;sqlite</PackageTags>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+		<ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+	</ItemGroup>
 </Project>

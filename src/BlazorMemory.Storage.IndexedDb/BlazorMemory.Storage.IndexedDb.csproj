@@ -1,31 +1,15 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
-
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <PackageId>BlazorMemory.Storage.IndexedDb</PackageId>
-    <Version>0.1.0</Version>
-    <Description>
-      Browser IndexedDB storage adapter for BlazorMemory.
-      Runs entirely client-side in Blazor WebAssembly — no backend required.
-      Stores memory entries and performs cosine similarity search in the browser.
-    </Description>
-    <PackageTags>blazor;wasm;indexeddb;ai;memory;browser</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/yourusername/BlazorMemory</RepositoryUrl>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.JSInterop" Version="8.0.0" />
-  </ItemGroup>
-
-  <!--
-    The wwwroot folder is automatically picked up as static web assets
-    by the Razor SDK — no manual StaticWebAsset declaration needed.
-  -->
-
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<PackageId>BlazorMemory.Storage.IndexedDb</PackageId>
+		<Version>0.1.0</Version>
+		<Description>Browser IndexedDB storage adapter for BlazorMemory. Zero-backend persistent memory for Blazor WebAssembly apps — everything stays in the user's browser.</Description>
+		<PackageTags>blazor;wasm;ai;memory;indexeddb;browser;offline</PackageTags>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+		<ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+	</ItemGroup>
 </Project>

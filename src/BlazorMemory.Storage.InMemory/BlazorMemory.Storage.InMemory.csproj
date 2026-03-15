@@ -1,17 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <PackageId>BlazorMemory.Storage.InMemory</PackageId>
-    <Version>0.1.0</Version>
-    <Description>In-memory storage adapter for BlazorMemory. Ideal for testing, prototyping, and unit tests.</Description>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
-  </ItemGroup>
-
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<PackageId>BlazorMemory.Storage.InMemory</PackageId>
+		<Version>0.1.0</Version>
+		<Description>In-memory storage adapter for BlazorMemory. Ideal for testing, prototyping, and development.</Description>
+		<PackageTags>blazor;ai;memory;inmemory;testing</PackageTags>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+		<ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+	</ItemGroup>
 </Project>
