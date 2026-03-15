@@ -116,12 +116,36 @@
             }
             else
             {
-                @foreach (var msg in Messages)
+                for (int i = 0; i < Messages.Count; i++)
                 {
+                    var msg   = Messages[i];
+                    var msgId = "msg_" + i;
+
                     <div class="message @msg.Role">
                         <div class="message-bubble">
                             <div class="message-text">@msg.Content</div>
-                            <div class="message-time">@msg.Timestamp.ToLocalTime().ToString("HH:mm")</div>
+                            <div class="message-footer">
+                                <span class="message-time">@msg.Timestamp.ToLocalTime().ToString("HH:mm")</span>
+                                <button class="copy-btn @(CopiedId == msgId ? "copied" : "")"
+                                        @onclick="() => CopyMessage(msg.Content, msgId)"
+                                        title="Copy">
+                                    @if (CopiedId == msgId)
+                                    {
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13">
+                                            <path d="M20 6L9 17l-5-5"/>
+                                        </svg>
+                                        <span>Copied</span>
+                                    }
+                                    else
+                                    {
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                                            <rect x="9" y="9" width="13" height="13" rx="2"/>
+                                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                                        </svg>
+                                        <span>Copy</span>
+                                    }
+                                </button>
+                            </div>
                         </div>
                     </div>
                 }

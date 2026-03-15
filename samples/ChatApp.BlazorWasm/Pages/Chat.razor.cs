@@ -18,6 +18,7 @@ public partial class Chat
     private string InputText { get; set; } = string.Empty;
     private string ApiKeyInput { get; set; } = string.Empty;
     private string? ErrorMessage { get; set; }
+    private string? CopiedId { get; set; }
 
     private bool IsLoading { get; set; }
     private bool LoadingMemories { get; set; }
@@ -65,7 +66,6 @@ public partial class Chat
             var reply = await ChatService.SendAsync(text, Messages);
             Messages.Add(new UserMessage { Role = "assistant", Content = reply });
 
-            // Refresh memory panel after a short delay for extraction to complete
             await Task.Delay(1500);
             await LoadMemoriesAsync();
         }
@@ -86,6 +86,18 @@ public partial class Chat
     {
         if (e.Key == "Enter" && !e.ShiftKey)
             await SendMessage();
+    }
+
+    private async Task CopyMessage(string content, string messageId)
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", content);
+        CopiedId = messageId;
+        StateHasChanged();
+
+        // Reset back to copy icon after 2 seconds
+        await Task.Delay(2000);
+        CopiedId = null;
+        StateHasChanged();
     }
 
     private async Task DeleteMemory(string id)
