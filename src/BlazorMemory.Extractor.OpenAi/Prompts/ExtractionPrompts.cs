@@ -1,48 +1,58 @@
-namespace BlazorMemory.Extractor.OpenAi.Prompts;
+﻿namespace BlazorMemory.Extractor.OpenAi.Prompts;
 
 internal static class ExtractionPrompts
 {
     public static string BuildExtractionSystemPrompt() => """
-        You are a memory extraction assistant. Your job is to extract discrete, self-contained facts about the user from a conversation.
+        You are a memory extraction assistant. Extract discrete, useful facts about the user from conversations.
 
         Rules:
-        - Extract only facts about the USER, not the assistant.
-        - Each fact must be a single, concise sentence.
-        - Facts must be objective and specific (avoid vague statements like "user seems nice").
-        - Do not extract greetings, questions, or conversational filler.
-        - Return facts as a JSON array of strings. Example: ["User is a software engineer.", "User works at Acme Corp."]
-        - If no facts can be extracted, return an empty array: []
-        - Return ONLY the JSON array, no explanation or markdown.
+        - Extract ONLY facts about the USER — not the assistant's responses.
+        - Each fact must be a single, self-contained sentence starting with "User".
+        - Be specific and concrete. Bad: "User likes technology." Good: "User is a software engineer who specializes in C#."
+        - Combine related details into one fact rather than splitting them. Bad: ["User is a developer.", "User uses C#."]. Good: ["User is a software engineer who works with C#."]
+        - Extract facts about: name, job, skills, preferences, goals, habits, relationships, location, opinions, and projects.
+        - Skip: greetings, questions, filler phrases, assistant responses, and anything not factual about the user.
+        - If the user corrects themselves (e.g. "actually I meant..."), extract only the corrected version.
+        - Return a JSON array of strings. Example: ["User is a software engineer who loves C#.", "User is building a Blazor app."]
+        - If no facts can be extracted, return: []
+        - Return ONLY the JSON array — no explanation, no markdown, no code fences.
         """;
 
     public static string BuildExtractionUserPrompt(string conversation) =>
-        $"Extract facts from this conversation:\n\n{conversation}";
+        $"Extract facts about the user from this conversation:\n\n{conversation}";
 
     public static string BuildConsolidationSystemPrompt() => """
-        You are a memory consolidation assistant. You are given a new fact and a list of existing memories.
-        Your job is to decide what to do with the new fact.
+        You are a memory consolidation assistant. Given a new fact and a list of existing memories, decide what to do.
 
-        Respond with ONLY a JSON object in one of these exact formats:
+        Respond with ONLY one of these exact JSON formats:
 
         {"action":"ADD"}
+        - Use when: the new fact is genuinely new information not covered by any existing memory.
+
         {"action":"NONE"}
-        {"action":"UPDATE","targetId":"<id>","updatedContent":"<merged fact string>"}
+        - Use when: an existing memory already captures this fact accurately. Prefer NONE over ADD for duplicates.
+
+        {"action":"UPDATE","targetId":"<id>","updatedContent":"<improved fact>"}
+        - Use when: an existing memory covers the same topic but is outdated, incomplete, or less specific.
+        - The updatedContent should be a single improved sentence that merges the best of both.
+        - Example: existing "User is a developer." + new "User is a senior C# developer at Microsoft." → UPDATE with "User is a senior C# developer at Microsoft."
+
         {"action":"DELETE","targetId":"<id>"}
+        - Use when: the new fact directly contradicts an existing memory and the old one should be removed entirely.
+        - Example: existing "User lives in London." + new "User moved to New York." → DELETE the London memory, then the new fact will be ADDed separately.
 
-        Decision rules:
-        - ADD: No existing memory covers this fact. Store it as new.
-        - NONE: An existing memory already captures this fact accurately. Do nothing.
-        - UPDATE: An existing memory is related but outdated or incomplete. Merge into a single improved fact.
-        - DELETE: The new fact explicitly contradicts and replaces an existing memory.
-
-        Return ONLY the JSON object. No explanation, no markdown.
+        Important:
+        - When in doubt between ADD and NONE, choose NONE to avoid storing redundant facts.
+        - When in doubt between ADD and UPDATE, choose UPDATE to keep memories consolidated.
+        - Never UPDATE with less specific information than what already exists.
+        - Return ONLY the JSON object — no explanation, no markdown.
         """;
 
     public static string BuildConsolidationUserPrompt(
         string newFact,
         IEnumerable<(string id, string content)> existingMemories)
     {
-        var existing = string.Join("\n", existingMemories.Select(m => $"- id: {m.id} | content: {m.content}"));
+        var existing = string.Join("\n", existingMemories.Select(m => $"- id:{m.id} | {m.content}"));
         return $"New fact: {newFact}\n\nExisting memories:\n{existing}";
     }
 }
