@@ -15,9 +15,10 @@ public sealed class ExtractionEngine
     private readonly IMemoryExtractor _extractor;
     private readonly ILogger<ExtractionEngine> _logger;
 
-    // How many similar memories to fetch per fact during consolidation.
-    private const int ConsolidationCandidateLimit = 5;
-    private const float ConsolidationSimilarityThreshold = 0.75f;
+    // Lower threshold surfaces more candidates so the LLM can catch
+    // partial overlaps like "User loves C#" vs "User specializes in C#".
+    private const int ConsolidationCandidateLimit = 8;
+    private const float ConsolidationSimilarityThreshold = 0.60f;
 
     public ExtractionEngine(
         IMemoryStore store,
@@ -36,7 +37,6 @@ public sealed class ExtractionEngine
     /// </summary>
     public async Task RunAsync(string conversation, string userId, CancellationToken ct = default)
     {
-        // Step 1: Extract facts from the conversation
         _logger.LogDebug("Extracting facts from conversation for user {UserId}", userId);
         var facts = await _extractor.ExtractFactsAsync(conversation, ct);
 
@@ -48,26 +48,22 @@ public sealed class ExtractionEngine
 
         _logger.LogDebug("Extracted {Count} fact(s) for user {UserId}", facts.Count, userId);
 
-        // Step 2: Process each fact through consolidation
         foreach (var fact in facts)
-        {
             await ProcessFactAsync(fact, userId, ct);
-        }
     }
 
     private async Task ProcessFactAsync(string fact, string userId, CancellationToken ct)
     {
-        // Embed the new fact
         var embedding = await _embeddings.EmbedAsync(fact, ct);
 
-        // Find similar existing memories
+        // Fetch more candidates at a lower threshold so partial overlaps
+        // are visible to the consolidation LLM
         var similar = await _store.SearchSimilarAsync(
             embedding, userId,
             ConsolidationCandidateLimit,
             ConsolidationSimilarityThreshold,
             ct);
 
-        // Ask the LLM to decide what to do
         var decision = await _extractor.ConsolidateAsync(fact, similar, ct);
 
         _logger.LogDebug(
@@ -77,15 +73,14 @@ public sealed class ExtractionEngine
         switch (decision.Action)
         {
             case ConsolidationAction.Add:
-                var newEntry = new MemoryEntry
+                await _store.AddAsync(new MemoryEntry
                 {
                     Id = Guid.NewGuid().ToString("N"),
                     UserId = userId,
                     Content = fact,
                     Embedding = embedding,
                     LearnedAt = DateTimeOffset.UtcNow
-                };
-                await _store.AddAsync(newEntry, ct);
+                }, ct);
                 break;
 
             case ConsolidationAction.Update when decision.TargetMemoryId is not null:
@@ -94,13 +89,12 @@ public sealed class ExtractionEngine
 
                 var updatedContent = decision.UpdatedContent ?? fact;
                 var updatedEmbedding = await _embeddings.EmbedAsync(updatedContent, ct);
-                var updated = existing with
+                await _store.UpdateAsync(existing with
                 {
                     Content = updatedContent,
                     Embedding = updatedEmbedding,
                     UpdatedAt = DateTimeOffset.UtcNow
-                };
-                await _store.UpdateAsync(updated, ct);
+                }, ct);
                 break;
 
             case ConsolidationAction.Delete when decision.TargetMemoryId is not null:
