@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<PackageId>BlazorMemory.Embeddings.OpenAi</PackageId>
-		<Version>0.1.0</Version>
+		<Version>0.2.0</Version>
 		<Description>OpenAI embeddings provider for BlazorMemory. Uses text-embedding-3-small by default for fast, cheap vector embeddings.</Description>
 		<PackageTags>blazor;ai;memory;openai;embeddings;vector</PackageTags>
 	</PropertyGroup>

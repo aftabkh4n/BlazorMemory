@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<PackageId>BlazorMemory</PackageId>
-		<Version>0.1.0</Version>
+		<Version>0.2.0</Version>
 		<Description>AI memory layer for .NET — LLM-powered fact extraction, intelligent consolidation, vector search, and staleness scoring. Works in Blazor WASM (browser) or server-side ASP.NET Core.</Description>
 		<PackageTags>blazor;ai;memory;llm;vector;embeddings;wasm;dotnet;openai;anthropic</PackageTags>
 	</PropertyGroup>

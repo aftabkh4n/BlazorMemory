@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<PackageId>BlazorMemory.Storage.InMemory</PackageId>
-		<Version>0.1.0</Version>
+		<Version>0.2.0</Version>
 		<Description>In-memory storage adapter for BlazorMemory. Ideal for testing, prototyping, and development.</Description>
 		<PackageTags>blazor;ai;memory;inmemory;testing</PackageTags>
 	</PropertyGroup>
