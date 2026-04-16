@@ -2,6 +2,7 @@ using Xunit;
 using BlazorMemory.Core.Abstractions;
 using BlazorMemory.Core.Models;
 using BlazorMemory.Core.Services;
+using BlazorMemory.Core.Engine;
 using BlazorMemory.Storage.InMemory;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -16,9 +17,9 @@ public class MemoryServiceTests
     private static (MemoryService sut, IMemoryStore store, IEmbeddingsProvider embeddings, IMemoryExtractor extractor)
         BuildSut()
     {
-        var store = Substitute.For<IMemoryStore>();
+        var store      = Substitute.For<IMemoryStore>();
         var embeddings = Substitute.For<IEmbeddingsProvider>();
-        var extractor = Substitute.For<IMemoryExtractor>();
+        var extractor  = Substitute.For<IMemoryExtractor>();
 
         embeddings.EmbedAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(FakeEmbedding());
@@ -26,7 +27,9 @@ public class MemoryServiceTests
 
         store.SearchSimilarAsync(
                 Arg.Any<float[]>(), Arg.Any<string>(),
-                Arg.Any<int>(), Arg.Any<float>(), Arg.Any<CancellationToken>())
+                Arg.Any<int>(), Arg.Any<float>(),
+                Arg.Any<string?>(),
+                Arg.Any<CancellationToken>())
             .Returns(Array.Empty<MemoryEntry>());
 
         extractor.ExtractFactsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -36,13 +39,10 @@ public class MemoryServiceTests
                 Arg.Any<CancellationToken>())
             .Returns(ConsolidationDecision.Add());
 
-        // MemoryService requires ExtractionEngine + ILogger - build them properly
-        var inMemoryStore = new InMemoryMemoryStore();
-        var engine = new BlazorMemory.Core.Engine.ExtractionEngine(
-                                 store, embeddings, extractor,
-                                 NullLogger<BlazorMemory.Core.Engine.ExtractionEngine>.Instance);
+        var engine = new ExtractionEngine(store, embeddings, extractor,
+            NullLogger<ExtractionEngine>.Instance);
         var sut = new MemoryService(store, embeddings, engine,
-                      NullLogger<MemoryService>.Instance);
+            NullLogger<MemoryService>.Instance);
 
         return (sut, store, embeddings, extractor);
     }
@@ -82,24 +82,26 @@ public class MemoryServiceTests
 
         var oldMemory = new MemoryEntry
         {
-            Id = "old",
-            UserId = "user_1",
-            Content = "old fact",
+            Id        = "old",
+            UserId    = "user_1",
+            Content   = "old fact",
             Embedding = FakeEmbedding(),
             LearnedAt = DateTimeOffset.UtcNow.AddDays(-200)
         };
         var newMemory = new MemoryEntry
         {
-            Id = "new",
-            UserId = "user_1",
-            Content = "new fact",
+            Id        = "new",
+            UserId    = "user_1",
+            Content   = "new fact",
             Embedding = FakeEmbedding(),
             LearnedAt = DateTimeOffset.UtcNow.AddDays(-10)
         };
 
         store.SearchSimilarAsync(
                 Arg.Any<float[]>(), Arg.Any<string>(),
-                Arg.Any<int>(), Arg.Any<float>(), Arg.Any<CancellationToken>())
+                Arg.Any<int>(), Arg.Any<float>(),
+                Arg.Any<string?>(),
+                Arg.Any<CancellationToken>())
             .Returns(new List<MemoryEntry> { oldMemory, newMemory });
 
         var results = await sut.QueryAsync("test", "user_1",
@@ -116,16 +118,18 @@ public class MemoryServiceTests
 
         var memory = new MemoryEntry
         {
-            Id = "m1",
-            UserId = "user_1",
-            Content = "some fact",
+            Id        = "m1",
+            UserId    = "user_1",
+            Content   = "some fact",
             Embedding = FakeEmbedding(),
             LearnedAt = DateTimeOffset.UtcNow.AddDays(-30)
         };
 
         store.SearchSimilarAsync(
                 Arg.Any<float[]>(), Arg.Any<string>(),
-                Arg.Any<int>(), Arg.Any<float>(), Arg.Any<CancellationToken>())
+                Arg.Any<int>(), Arg.Any<float>(),
+                Arg.Any<string?>(),
+                Arg.Any<CancellationToken>())
             .Returns(new List<MemoryEntry> { memory });
 
         var results = await sut.QueryAsync("test", "user_1",
@@ -142,9 +146,9 @@ public class MemoryServiceTests
 
         var existing = new MemoryEntry
         {
-            Id = "m1",
-            UserId = "user_1",
-            Content = "original",
+            Id        = "m1",
+            UserId    = "user_1",
+            Content   = "original",
             Embedding = FakeEmbedding(),
             LearnedAt = DateTimeOffset.UtcNow
         };

@@ -5,124 +5,96 @@ using Microsoft.Extensions.Logging;
 
 namespace BlazorMemory.Core.Services;
 
-/// <summary>
-/// Default implementation of <see cref="IMemoryService"/>.
-/// Registered automatically by AddBlazorMemory().
-/// </summary>
 public sealed class MemoryService : IMemoryService
 {
-    private readonly IMemoryStore _store;
-    private readonly IEmbeddingsProvider _embeddings;
-    private readonly ExtractionEngine _extractionEngine;
+    private readonly IMemoryStore          _store;
+    private readonly IEmbeddingsProvider   _embeddings;
+    private readonly ExtractionEngine      _engine;
     private readonly ILogger<MemoryService> _logger;
 
     public MemoryService(
         IMemoryStore store,
         IEmbeddingsProvider embeddings,
-        ExtractionEngine extractionEngine,
+        ExtractionEngine engine,
         ILogger<MemoryService> logger)
     {
-        _store = store;
+        _store      = store;
         _embeddings = embeddings;
-        _extractionEngine = extractionEngine;
-        _logger = logger;
+        _engine     = engine;
+        _logger     = logger;
     }
 
-    /// <inheritdoc />
-    public async Task ExtractAsync(string conversation, string userId, CancellationToken ct = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversation);
-        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+    public Task ExtractAsync(
+        string conversation,
+        string userId,
+        string? @namespace = null,
+        CancellationToken ct = default)
+        => _engine.RunAsync(conversation, userId, @namespace, ct);
 
-        _logger.LogInformation("Starting memory extraction for user {UserId}", userId);
-        await _extractionEngine.RunAsync(conversation, userId, ct);
-        _logger.LogInformation("Memory extraction complete for user {UserId}", userId);
-    }
-
-    /// <inheritdoc />
     public async Task<IReadOnlyList<MemoryEntry>> QueryAsync(
         string context,
         string userId,
         QueryOptions? options = null,
         CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(context);
-        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
-
         options ??= new QueryOptions();
-
-        var queryEmbedding = await _embeddings.EmbedAsync(context, ct);
+        var embedding = await _embeddings.EmbedAsync(context, ct);
 
         var results = await _store.SearchSimilarAsync(
-            queryEmbedding,
-            userId,
+            embedding, userId,
             options.Limit,
             options.Threshold,
+            options.Namespace,
             ct);
 
-        // Filter by max age if requested
+        // Filter by age if requested
         if (options.MaxAgeInDays.HasValue)
         {
             var cutoff = DateTimeOffset.UtcNow.AddDays(-options.MaxAgeInDays.Value);
-            results = results
-                .Where(m => (m.UpdatedAt ?? m.LearnedAt) >= cutoff)
-                .ToList();
+            results = results.Where(m => m.LearnedAt >= cutoff).ToList();
         }
 
-        // Apply staleness scores if requested
+        // Attach staleness scores if requested
         if (options.IncludeStalenessScore)
         {
-            results = StalenessCalculator.ApplyTo(results, options.StalenessHalfLifeDays);
+            results = results
+                .Select(m => m.WithStalenessScore(
+                    StalenessCalculator.Calculate(m, options.StalenessHalfLifeDays)))
+                .ToList();
         }
 
         return results;
     }
 
-    /// <inheritdoc />
-    public Task<IReadOnlyList<MemoryEntry>> ListAsync(string userId, CancellationToken ct = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
-        return _store.ListAsync(userId, ct);
-    }
+    public Task<IReadOnlyList<MemoryEntry>> ListAsync(
+        string userId,
+        string? @namespace = null,
+        CancellationToken ct = default)
+        => _store.ListAsync(userId, @namespace, ct);
 
-    /// <inheritdoc />
     public Task<MemoryEntry?> GetAsync(string id, CancellationToken ct = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        return _store.GetAsync(id, ct);
-    }
+        => _store.GetAsync(id, ct);
 
-    /// <inheritdoc />
     public async Task UpdateAsync(string id, string content, CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        ArgumentException.ThrowIfNullOrWhiteSpace(content);
+        var existing = await _store.GetAsync(id, ct);
+        if (existing is null) return;
 
-        var entry = await _store.GetAsync(id, ct)
-            ?? throw new KeyNotFoundException($"Memory with id '{id}' not found.");
-
-        var newEmbedding = await _embeddings.EmbedAsync(content, ct);
-        var updated = entry with
+        var embedding = await _embeddings.EmbedAsync(content, ct);
+        await _store.UpdateAsync(existing with
         {
-            Content = content,
-            Embedding = newEmbedding,
+            Content   = content,
+            Embedding = embedding,
             UpdatedAt = DateTimeOffset.UtcNow
-        };
-
-        await _store.UpdateAsync(updated, ct);
+        }, ct);
     }
 
-    /// <inheritdoc />
     public Task DeleteAsync(string id, CancellationToken ct = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        return _store.DeleteAsync(id, ct);
-    }
+        => _store.DeleteAsync(id, ct);
 
-    /// <inheritdoc />
-    public Task ClearAsync(string userId, CancellationToken ct = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
-        return _store.ClearAsync(userId, ct);
-    }
+    public Task ClearAsync(
+        string userId,
+        string? @namespace = null,
+        CancellationToken ct = default)
+        => _store.ClearAsync(userId, @namespace, ct);
 }

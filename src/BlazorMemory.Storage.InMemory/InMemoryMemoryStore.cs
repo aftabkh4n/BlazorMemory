@@ -1,51 +1,53 @@
-using System.Collections.Concurrent;
 using BlazorMemory.Core.Abstractions;
 using BlazorMemory.Core.Engine;
+using BlazorMemory.Core.Extensions;
 using BlazorMemory.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BlazorMemory.Storage.InMemory;
 
-/// <summary>
-/// Thread-safe in-memory implementation of <see cref="IMemoryStore"/>.
-/// Data is lost when the process restarts. Ideal for unit tests and rapid prototyping.
-/// </summary>
 public sealed class InMemoryMemoryStore : IMemoryStore
 {
-    private readonly ConcurrentDictionary<string, MemoryEntry> _store = new();
+    private readonly Dictionary<string, MemoryEntry> _store = [];
+    private readonly object _lock = new();
 
     public Task<string> AddAsync(MemoryEntry entry, CancellationToken ct = default)
     {
-        _store[entry.Id] = entry;
+        lock (_lock) _store[entry.Id] = entry;
         return Task.FromResult(entry.Id);
     }
 
     public Task UpdateAsync(MemoryEntry entry, CancellationToken ct = default)
     {
-        _store[entry.Id] = entry;
+        lock (_lock) _store[entry.Id] = entry;
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(string id, CancellationToken ct = default)
     {
-        _store.TryRemove(id, out _);
+        lock (_lock) _store.Remove(id);
         return Task.CompletedTask;
     }
 
     public Task<MemoryEntry?> GetAsync(string id, CancellationToken ct = default)
     {
-        _store.TryGetValue(id, out var entry);
+        MemoryEntry? entry;
+        lock (_lock) _store.TryGetValue(id, out entry);
         return Task.FromResult(entry);
     }
 
-    public Task<IReadOnlyList<MemoryEntry>> ListAsync(string userId, CancellationToken ct = default)
+    public Task<IReadOnlyList<MemoryEntry>> ListAsync(
+        string userId,
+        string? @namespace = null,
+        CancellationToken ct = default)
     {
-        IReadOnlyList<MemoryEntry> result = _store.Values
-            .Where(e => e.UserId == userId)
-            .OrderByDescending(e => e.UpdatedAt ?? e.LearnedAt)
-            .ToList();
-
-        return Task.FromResult(result);
+        lock (_lock)
+        {
+            var results = _store.Values
+                .Where(m => m.UserId == userId && MatchesNamespace(m, @namespace))
+                .ToList();
+            return Task.FromResult<IReadOnlyList<MemoryEntry>>(results);
+        }
     }
 
     public Task<IReadOnlyList<MemoryEntry>> SearchSimilarAsync(
@@ -53,44 +55,47 @@ public sealed class InMemoryMemoryStore : IMemoryStore
         string userId,
         int limit,
         float threshold,
+        string? @namespace = null,
         CancellationToken ct = default)
     {
-        IReadOnlyList<MemoryEntry> result = _store.Values
-            .Where(e => e.UserId == userId)
-            .Select(e => (entry: e, score: VectorMath.CosineSimilarity(queryEmbedding, e.Embedding)))
-            .Where(x => x.score >= threshold)
-            .OrderByDescending(x => x.score)
-            .Take(limit)
-            .Select(x => x.entry.WithRelevanceScore(x.score))
-            .ToList();
-
-        return Task.FromResult(result);
+        lock (_lock)
+        {
+            var results = _store.Values
+                .Where(m => m.UserId == userId && MatchesNamespace(m, @namespace))
+                .Select(m => m.WithRelevanceScore(VectorMath.CosineSimilarity(queryEmbedding, m.Embedding)))
+                .Where(m => m.RelevanceScore >= threshold)
+                .OrderByDescending(m => m.RelevanceScore)
+                .Take(limit)
+                .ToList();
+            return Task.FromResult<IReadOnlyList<MemoryEntry>>(results);
+        }
     }
 
-    public Task ClearAsync(string userId, CancellationToken ct = default)
+    public Task ClearAsync(
+        string userId,
+        string? @namespace = null,
+        CancellationToken ct = default)
     {
-        var keysToRemove = _store.Values
-            .Where(e => e.UserId == userId)
-            .Select(e => e.Id)
-            .ToList();
-
-        foreach (var key in keysToRemove)
-            _store.TryRemove(key, out _);
-
+        lock (_lock)
+        {
+            var toRemove = _store.Values
+                .Where(m => m.UserId == userId && MatchesNamespace(m, @namespace))
+                .Select(m => m.Id)
+                .ToList();
+            foreach (var id in toRemove) _store.Remove(id);
+        }
         return Task.CompletedTask;
     }
+
+    private static bool MatchesNamespace(MemoryEntry m, string? @namespace)
+        => @namespace is null || m.Namespace == @namespace;
 }
 
-/// <summary>DI registration extension for InMemoryMemoryStore.</summary>
 public static class InMemoryStorageExtensions
 {
-    /// <summary>
-    /// Registers the in-memory storage adapter. Suitable for testing and prototyping only.
-    /// </summary>
-    public static BlazorMemory.Core.Extensions.BlazorMemoryBuilder UseInMemoryStorage(
-        this BlazorMemory.Core.Extensions.BlazorMemoryBuilder builder)
+    public static BlazorMemoryBuilder UseInMemoryStorage(this BlazorMemoryBuilder builder)
     {
-        builder.Services.AddSingleton<IMemoryStore, InMemoryMemoryStore>();
+        builder.Services.AddScoped<IMemoryStore, InMemoryMemoryStore>();
         return builder;
     }
 }

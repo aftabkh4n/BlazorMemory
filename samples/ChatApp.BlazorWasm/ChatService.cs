@@ -33,12 +33,15 @@ public sealed class ChatService
             throw new InvalidOperationException(
                 "OpenAI API key is not configured. Enter your key in the app config panel.");
 
-        var memories = await _memory.QueryAsync(userMessage, UserId,
-            new QueryOptions { Limit = 5, Threshold = 0.65f }, ct);
+        // 1. Retrieve relevant memories
+        var memories = await _memory.QueryAsync(
+            userMessage, UserId,
+            new QueryOptions { Limit = 5, Threshold = 0.65f },
+            ct);
 
         var systemPrompt = BuildSystemPrompt(memories);
-        var client = new OpenAIClient(ApiKeyStore.Instance.ApiKey).GetChatClient("gpt-4o-mini");
-        var messages = new List<ChatMessage> { new SystemChatMessage(systemPrompt) };
+        var client       = new OpenAIClient(ApiKeyStore.Instance.ApiKey).GetChatClient("gpt-4o-mini");
+        var messages     = new List<ChatMessage> { new SystemChatMessage(systemPrompt) };
 
         foreach (var msg in history.TakeLast(20))
         {
@@ -48,19 +51,22 @@ public sealed class ChatService
         }
         messages.Add(new UserChatMessage(userMessage));
 
-        var response = await client.CompleteChatAsync(messages, cancellationToken: ct);
+        // 2. Call OpenAI
+        var response       = await client.CompleteChatAsync(messages, cancellationToken: ct);
         var assistantReply = response.Value.Content[0].Text;
 
+        // 3. Extract memories in background
         _ = ExtractMemoriesAsync(userMessage, assistantReply);
 
         return assistantReply;
     }
 
     public Task<IReadOnlyList<MemoryEntry>> GetAllMemoriesAsync(CancellationToken ct = default)
-        => _memory.ListAsync(UserId, ct);
+        => _memory.ListAsync(UserId, null, ct);
 
     public Task DeleteMemoryAsync(string id) => _memory.DeleteAsync(id);
-    public Task ClearAllMemoriesAsync() => _memory.ClearAsync(UserId);
+
+    public Task ClearAllMemoriesAsync() => _memory.ClearAsync(UserId, null);
 
     private static string BuildSystemPrompt(IReadOnlyList<MemoryEntry> memories)
     {
