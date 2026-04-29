@@ -1,63 +1,17 @@
 @page "/"
-@using BlazorMemory.Core.Models
+@using BlazorMemory.Components
 @using ChatApp.BlazorWasm.Models
 
 <PageTitle>BlazorMemory Demo</PageTitle>
 
 <div class="app-shell">
 
-    <!-- ── Sidebar: Memory Panel ─────────────────────────── -->
-    <aside class="memory-panel @(ShowMemoryPanel ? "open" : "")">
-        <div class="panel-header">
-            <div class="panel-title">
-                <span class="panel-icon">◈</span>
-                Memory Store
-            </div>
-            <span class="memory-count">@Memories.Count stored</span>
-        </div>
+    <MemoryPanel UserId="demo_user"
+                 IsOpen="ShowMemoryPanel"
+                 @ref="_memoryPanel" />
 
-        <div class="panel-body">
-            @if (LoadingMemories)
-            {
-                <div class="panel-loading">
-                    <div class="spinner-small"></div>
-                    <span>Loading memories...</span>
-                </div>
-            }
-            else if (Memories.Count == 0)
-            {
-                <div class="panel-empty">
-                    <div class="empty-icon">◇</div>
-                    <p>No memories yet.</p>
-                    <p class="empty-hint">Start chatting — facts about you will appear here.</p>
-                </div>
-            }
-            else
-            {
-                <div class="memory-list">
-                    @foreach (var memory in Memories)
-                    {
-                        <div class="memory-card">
-                            <div class="memory-content">@memory.Content</div>
-                            <div class="memory-meta">
-                                <span class="memory-date">@FormatDate(memory.UpdatedAt ?? memory.LearnedAt)</span>
-                                <button class="memory-delete" @onclick="() => DeleteMemory(memory.Id)" title="Delete">✕</button>
-                            </div>
-                        </div>
-                    }
-                </div>
-
-                <button class="btn-clear" @onclick="ClearAllMemories">
-                    Clear all memories
-                </button>
-            }
-        </div>
-    </aside>
-
-    <!-- ── Main: Chat Area ───────────────────────────────── -->
     <main class="chat-area">
 
-        <!-- Top bar -->
         <header class="chat-header">
             <div class="header-left">
                 <div class="logo-mark">◈</div>
@@ -77,12 +31,10 @@
                 }
                 <button class="btn-memory-toggle" @onclick="ToggleMemoryPanel">
                     @(ShowMemoryPanel ? "Hide Memories" : "Show Memories")
-                    <span class="memory-badge">@Memories.Count</span>
                 </button>
             </div>
         </header>
 
-        <!-- Config panel -->
         @if (ShowConfig)
         {
             <div class="config-bar">
@@ -99,7 +51,6 @@
             </div>
         }
 
-        <!-- Messages -->
         <div class="messages-area" @ref="MessagesRef">
             @if (Messages.Count == 0)
             {
@@ -161,7 +112,6 @@
             }
         </div>
 
-        <!-- Error -->
         @if (!string.IsNullOrEmpty(ErrorMessage))
         {
             <div class="error-bar">
@@ -170,7 +120,6 @@
             </div>
         }
 
-        <!-- Input -->
         <div class="input-area">
             <div class="input-box">
                 <textarea

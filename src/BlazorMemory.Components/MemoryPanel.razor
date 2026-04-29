@@ -1,0 +1,146 @@
+﻿@using BlazorMemory.Core.Abstractions
+@using BlazorMemory.Core.Models
+@inject IMemoryService MemoryService
+
+<div class="bm-panel @(IsOpen ? "bm-panel--open" : "")">
+
+    <div class="bm-panel__header">
+        <div class="bm-panel__title">
+            <span class="bm-panel__icon">◈</span>
+            @Title
+        </div>
+        <span class="bm-panel__count">@_memories.Count stored</span>
+    </div>
+
+    <div class="bm-panel__body">
+        @if (_loading)
+        {
+            <div class="bm-panel__loading">
+                <div class="bm-spinner"></div>
+                <span>Loading...</span>
+            </div>
+        }
+        else if (_memories.Count == 0)
+        {
+            <div class="bm-panel__empty">
+                <div class="bm-panel__empty-icon">◇</div>
+                <p>@EmptyMessage</p>
+            </div>
+        }
+        else
+        {
+            <div class="bm-memory-list">
+                @foreach (var memory in _memories)
+                {
+                    <div class="bm-memory-card">
+                        <div class="bm-memory-card__content">@memory.Content</div>
+                        <div class="bm-memory-card__meta">
+                            <span class="bm-memory-card__date">@FormatDate(memory.UpdatedAt ?? memory.LearnedAt)</span>
+                            @if (AllowDelete)
+                            {
+                                <button class="bm-memory-card__delete"
+                                        @onclick="() => DeleteAsync(memory.Id)"
+                                        title="Delete memory">✕</button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (AllowClear)
+            {
+                <button class="bm-btn-clear" @onclick="ClearAsync">
+                    Clear all memories
+                </button>
+            }
+        }
+    </div>
+
+</div>
+
+@code {
+    /// <summary>The user ID whose memories to display.</summary>
+    [Parameter, EditorRequired]
+    public string UserId { get; set; } = string.Empty;
+
+    /// <summary>Optional namespace to filter memories by topic.</summary>
+    [Parameter]
+    public string? Namespace { get; set; }
+
+    /// <summary>Whether the panel is visible. Bind to a bool in your parent component.</summary>
+    [Parameter]
+    public bool IsOpen { get; set; } = true;
+
+    /// <summary>Panel header title.</summary>
+    [Parameter]
+    public string Title { get; set; } = "Memory Store";
+
+    /// <summary>Message shown when there are no memories yet.</summary>
+    [Parameter]
+    public string EmptyMessage { get; set; } = "No memories yet. Start chatting and facts will appear here.";
+
+    /// <summary>Whether to show delete buttons on individual memories.</summary>
+    [Parameter]
+    public bool AllowDelete { get; set; } = true;
+
+    /// <summary>Whether to show the Clear All button.</summary>
+    [Parameter]
+    public bool AllowClear { get; set; } = true;
+
+    /// <summary>Raised after a memory is deleted.</summary>
+    [Parameter]
+    public EventCallback<string> OnMemoryDeleted { get; set; }
+
+    /// <summary>Raised after all memories are cleared.</summary>
+    [Parameter]
+    public EventCallback OnMemoriesCleared { get; set; }
+
+    /// <summary>Call this from your parent after new memories are stored to refresh the panel.</summary>
+    public async Task RefreshAsync()
+    {
+        await LoadAsync();
+        StateHasChanged();
+    }
+
+    private List<MemoryEntry> _memories = [];
+    private bool _loading;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+        var results = await MemoryService.ListAsync(UserId, Namespace);
+        _memories = results.ToList();
+        _loading = false;
+    }
+
+    private async Task DeleteAsync(string id)
+    {
+        await MemoryService.DeleteAsync(id);
+        _memories.RemoveAll(m => m.Id == id);
+        await OnMemoryDeleted.InvokeAsync(id);
+        StateHasChanged();
+    }
+
+    private async Task ClearAsync()
+    {
+        await MemoryService.ClearAsync(UserId, Namespace);
+        _memories.Clear();
+        await OnMemoriesCleared.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private static string FormatDate(DateTimeOffset dt)
+    {
+        var diff = DateTimeOffset.UtcNow - dt;
+        return diff.TotalMinutes < 1  ? "just now"
+             : diff.TotalHours   < 1  ? $"{(int)diff.TotalMinutes}m ago"
+             : diff.TotalDays    < 1  ? $"{(int)diff.TotalHours}h ago"
+             : dt.ToLocalTime().ToString("MMM d");
+    }
+}

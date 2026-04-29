@@ -1,4 +1,4 @@
-using BlazorMemory.Core.Models;
+using BlazorMemory.Components;
 using ChatApp.BlazorWasm.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -11,30 +11,21 @@ public partial class Chat
     [Inject] private ChatService ChatService { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
-    // ── State ─────────────────────────────────────────────────────────────────
     private List<UserMessage> Messages { get; set; } = [];
-    private List<MemoryEntry> Memories { get; set; } = [];
+    private MemoryPanel? _memoryPanel;
 
-    private string InputText { get; set; } = string.Empty;
-    private string ApiKeyInput { get; set; } = string.Empty;
+    private string  InputText   { get; set; } = string.Empty;
+    private string  ApiKeyInput { get; set; } = string.Empty;
     private string? ErrorMessage { get; set; }
-    private string? CopiedId { get; set; }
+    private string? CopiedId    { get; set; }
 
-    private bool IsLoading { get; set; }
-    private bool LoadingMemories { get; set; }
+    private bool IsLoading       { get; set; }
     private bool ShowMemoryPanel { get; set; } = true;
-    private bool ShowConfig { get; set; }
+    private bool ShowConfig      { get; set; }
     private bool ApiKeySet => ChatService.HasApiKey;
 
     private ElementReference MessagesRef;
     private ElementReference InputRef;
-
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadMemoriesAsync();
-    }
 
     protected override Task OnAfterRenderAsync(bool firstRender)
     {
@@ -46,14 +37,12 @@ public partial class Chat
         return Task.CompletedTask;
     }
 
-    // ── Actions ───────────────────────────────────────────────────────────────
-
     private async Task SendMessage()
     {
         var text = InputText.Trim();
         if (string.IsNullOrEmpty(text) || IsLoading || !ApiKeySet) return;
 
-        InputText = string.Empty;
+        InputText    = string.Empty;
         ErrorMessage = null;
 
         Messages.Add(new UserMessage { Role = "user", Content = text });
@@ -67,7 +56,8 @@ public partial class Chat
             Messages.Add(new UserMessage { Role = "assistant", Content = reply });
 
             await Task.Delay(1500);
-            await LoadMemoriesAsync();
+            if (_memoryPanel is not null)
+                await _memoryPanel.RefreshAsync();
         }
         catch (Exception ex)
         {
@@ -93,31 +83,8 @@ public partial class Chat
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", content);
         CopiedId = messageId;
         StateHasChanged();
-
-        // Reset back to copy icon after 2 seconds
         await Task.Delay(2000);
         CopiedId = null;
-        StateHasChanged();
-    }
-
-    private async Task DeleteMemory(string id)
-    {
-        await ChatService.DeleteMemoryAsync(id);
-        await LoadMemoriesAsync();
-    }
-
-    private async Task ClearAllMemories()
-    {
-        await ChatService.ClearAllMemoriesAsync();
-        await LoadMemoriesAsync();
-    }
-
-    private async Task LoadMemoriesAsync()
-    {
-        LoadingMemories = true;
-        StateHasChanged();
-        Memories = (await ChatService.GetAllMemoriesAsync()).ToList();
-        LoadingMemories = false;
         StateHasChanged();
     }
 
@@ -134,21 +101,10 @@ public partial class Chat
         if (!string.IsNullOrWhiteSpace(ApiKeyInput))
         {
             ChatService.SetApiKey(ApiKeyInput.Trim());
-            ShowConfig = false;
+            ShowConfig   = false;
             ErrorMessage = null;
             StateHasChanged();
         }
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static string FormatDate(DateTimeOffset dt)
-    {
-        var diff = DateTimeOffset.UtcNow - dt;
-        return diff.TotalMinutes < 1 ? "just now"
-             : diff.TotalHours < 1 ? $"{(int)diff.TotalMinutes}m ago"
-             : diff.TotalDays < 1 ? $"{(int)diff.TotalHours}h ago"
-             : dt.ToLocalTime().ToString("MMM d");
     }
 
     private async Task ScrollToBottomAsync()

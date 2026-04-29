@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\BlazorMemory.Components\BlazorMemory.Components.csproj" />
     <ProjectReference Include="..\..\src\BlazorMemory.Core\BlazorMemory.Core.csproj" />
     <ProjectReference Include="..\..\src\BlazorMemory.Storage.IndexedDb\BlazorMemory.Storage.IndexedDb.csproj" />
     <ProjectReference Include="..\..\src\BlazorMemory.Embeddings.OpenAi\BlazorMemory.Embeddings.OpenAi.csproj" />
