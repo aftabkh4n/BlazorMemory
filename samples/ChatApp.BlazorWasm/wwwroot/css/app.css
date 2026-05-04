@@ -888,3 +888,46 @@ html, body {
         box-shadow: 4px 0 24px rgba(0,0,0,0.5);
     }
 }
+
+/* ── MemoryPanel footer (export/import/clear) ───────────────── */
+.bm-panel__footer {
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.bm-btn-action {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: var(--font-display);
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.bm-btn-action:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-glow);
+}
+
+.bm-btn-clear {
+    margin-top: 0;
+    margin-left: auto;
+    width: auto;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    padding: 5px 10px;
+}

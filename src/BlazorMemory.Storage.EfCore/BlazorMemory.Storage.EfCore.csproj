@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<PackageId>BlazorMemory.Storage.EfCore</PackageId>
-		<Version>0.2.0</Version>
+		<Version>0.3.0</Version>
 		<Description>Entity Framework Core storage adapter for BlazorMemory. Supports SQL Server, PostgreSQL, and SQLite for server-side Blazor and ASP.NET Core apps.</Description>
 		<PackageTags>blazor;ai;memory;efcore;postgresql;sqlserver;sqlite</PackageTags>
 	</PropertyGroup>

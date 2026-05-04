@@ -10,7 +10,6 @@ public interface IMemoryService
     /// <summary>
     /// Extracts facts from a conversation and consolidates them with existing memories.
     /// </summary>
-    /// <param name="namespace">Optional namespace to scope memories (e.g. "work", "personal").</param>
     Task ExtractAsync(
         string conversation,
         string userId,
@@ -37,6 +36,25 @@ public interface IMemoryService
 
     Task ClearAsync(
         string userId,
+        string? @namespace = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Exports all memories for a user as a JSON string.
+    /// Optionally scoped to a namespace.
+    /// </summary>
+    Task<string> ExportAsync(
+        string userId,
+        string? @namespace = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Imports memories from a JSON string previously created by ExportAsync.
+    /// Skips any memory whose content already exists to avoid duplicates.
+    /// </summary>
+    Task ImportAsync(
+        string userId,
+        string json,
         string? @namespace = null,
         CancellationToken ct = default);
 }

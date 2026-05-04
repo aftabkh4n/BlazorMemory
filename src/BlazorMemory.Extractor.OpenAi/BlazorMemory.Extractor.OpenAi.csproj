@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<PackageId>BlazorMemory.Extractor.OpenAi</PackageId>
-		<Version>0.2.0</Version>
+		<Version>0.3.0</Version>
 		<Description>OpenAI-powered fact extractor and memory consolidator for BlazorMemory. Uses gpt-4o-mini by default for fast, cheap extraction.</Description>
 		<PackageTags>blazor;ai;memory;openai;gpt;extraction;llm</PackageTags>
 	</PropertyGroup>

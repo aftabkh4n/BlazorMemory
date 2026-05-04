@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<PackageId>BlazorMemory.Storage.IndexedDb</PackageId>
-		<Version>0.2.0</Version>
+		<Version>0.3.0</Version>
 		<Description>Browser IndexedDB storage adapter for BlazorMemory. Zero-backend persistent memory for Blazor WebAssembly apps — everything stays in the user's browser.</Description>
 		<PackageTags>blazor;wasm;ai;memory;indexeddb;browser;offline</PackageTags>
 	</PropertyGroup>

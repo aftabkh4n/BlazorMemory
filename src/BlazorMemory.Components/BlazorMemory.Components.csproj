@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <PackageId>BlazorMemory.Components</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.3.0</Version>
     <Description>Drop-in Blazor UI components for BlazorMemory. Add a memory panel to your app with a single component.</Description>
     <PackageTags>blazor;ai;memory;components;ui</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -15,6 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.0" />
+    <PackageReference Include="Microsoft.JSInterop" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />

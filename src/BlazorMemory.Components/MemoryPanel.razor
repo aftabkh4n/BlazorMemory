@@ -1,6 +1,7 @@
 ﻿@using BlazorMemory.Core.Abstractions
 @using BlazorMemory.Core.Models
 @inject IMemoryService MemoryService
+@inject IJSRuntime JS
 
 <div class="bm-panel @(IsOpen ? "bm-panel--open" : "")">
 
@@ -39,71 +40,73 @@
                             @if (AllowDelete)
                             {
                                 <button class="bm-memory-card__delete"
-                                        @onclick="() => DeleteAsync(memory.Id)"
+                                        @onclick="() => DeleteMemoryAsync(memory.Id)"
                                         title="Delete memory">✕</button>
                             }
                         </div>
                     </div>
                 }
             </div>
+        }
+    </div>
 
-            @if (AllowClear)
-            {
-                <button class="bm-btn-clear" @onclick="ClearAsync">
-                    Clear all memories
-                </button>
-            }
+    <div class="bm-panel__footer">
+        @if (AllowExport && _memories.Count > 0)
+        {
+            <button class="bm-btn-action" @onclick="ExportAsync" title="Download memories as JSON">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Export
+            </button>
+        }
+        @if (AllowImport)
+        {
+            <label class="bm-btn-action" title="Import memories from JSON">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Import
+                <InputFile OnChange="ImportAsync" accept=".json" style="display:none" />
+            </label>
+        }
+        @if (AllowClear && _memories.Count > 0)
+        {
+            <button class="bm-btn-clear" @onclick="ClearAsync">
+                Clear all
+            </button>
         }
     </div>
 
 </div>
 
 @code {
-    /// <summary>The user ID whose memories to display.</summary>
-    [Parameter, EditorRequired]
-    public string UserId { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string UserId    { get; set; } = string.Empty;
+    [Parameter] public string?  Namespace    { get; set; }
+    [Parameter] public bool     IsOpen       { get; set; } = true;
+    [Parameter] public string   Title        { get; set; } = "Memory Store";
+    [Parameter] public string   EmptyMessage { get; set; } = "No memories yet. Start chatting and facts will appear here.";
+    [Parameter] public bool     AllowDelete  { get; set; } = true;
+    [Parameter] public bool     AllowClear   { get; set; } = true;
+    [Parameter] public bool     AllowExport  { get; set; } = true;
+    [Parameter] public bool     AllowImport  { get; set; } = true;
 
-    /// <summary>Optional namespace to filter memories by topic.</summary>
-    [Parameter]
-    public string? Namespace { get; set; }
+    [Parameter] public EventCallback<string> OnMemoryDeleted   { get; set; }
+    [Parameter] public EventCallback         OnMemoriesCleared { get; set; }
+    [Parameter] public EventCallback<int>    OnImportCompleted { get; set; }
 
-    /// <summary>Whether the panel is visible. Bind to a bool in your parent component.</summary>
-    [Parameter]
-    public bool IsOpen { get; set; } = true;
+    private List<MemoryEntry> _memories = [];
+    private bool _loading;
 
-    /// <summary>Panel header title.</summary>
-    [Parameter]
-    public string Title { get; set; } = "Memory Store";
-
-    /// <summary>Message shown when there are no memories yet.</summary>
-    [Parameter]
-    public string EmptyMessage { get; set; } = "No memories yet. Start chatting and facts will appear here.";
-
-    /// <summary>Whether to show delete buttons on individual memories.</summary>
-    [Parameter]
-    public bool AllowDelete { get; set; } = true;
-
-    /// <summary>Whether to show the Clear All button.</summary>
-    [Parameter]
-    public bool AllowClear { get; set; } = true;
-
-    /// <summary>Raised after a memory is deleted.</summary>
-    [Parameter]
-    public EventCallback<string> OnMemoryDeleted { get; set; }
-
-    /// <summary>Raised after all memories are cleared.</summary>
-    [Parameter]
-    public EventCallback OnMemoriesCleared { get; set; }
-
-    /// <summary>Call this from your parent after new memories are stored to refresh the panel.</summary>
     public async Task RefreshAsync()
     {
         await LoadAsync();
         StateHasChanged();
     }
-
-    private List<MemoryEntry> _memories = [];
-    private bool _loading;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -119,7 +122,7 @@
         _loading = false;
     }
 
-    private async Task DeleteAsync(string id)
+    private async Task DeleteMemoryAsync(string id)
     {
         await MemoryService.DeleteAsync(id);
         _memories.RemoveAll(m => m.Id == id);
@@ -132,6 +135,31 @@
         await MemoryService.ClearAsync(UserId, Namespace);
         _memories.Clear();
         await OnMemoriesCleared.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private async Task ExportAsync()
+    {
+        var json     = await MemoryService.ExportAsync(UserId, Namespace);
+        var fileName = $"blazormemory-{UserId}-{DateTime.UtcNow:yyyyMMdd}.json";
+        await JS.InvokeVoidAsync("BlazorMemoryExport.download", fileName, json);
+    }
+
+    private async Task ImportAsync(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+
+        using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+        using var reader = new System.IO.StreamReader(stream);
+        var json = await reader.ReadToEndAsync();
+
+        var countBefore = _memories.Count;
+        await MemoryService.ImportAsync(UserId, json, Namespace);
+        await LoadAsync();
+
+        var imported = _memories.Count - countBefore;
+        await OnImportCompleted.InvokeAsync(imported);
         StateHasChanged();
     }
 
