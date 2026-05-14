@@ -1,0 +1,27 @@
+@using BlazorMemory.Core.Enums
+
+<div class="bm-mode-toggle">
+    <button class="bm-mode-toggle__btn @(Value == MemoryMode.Semantic ? "active" : "")"
+            @onclick="() => SetMode(MemoryMode.Semantic)">
+        Semantic
+    </button>
+
+    <button class="bm-mode-toggle__btn @(Value == MemoryMode.Verbatim ? "active" : "")"
+            @onclick="() => SetMode(MemoryMode.Verbatim)">
+        Verbatim
+    </button>
+</div>
+
+@code {
+    [Parameter] public MemoryMode Value { get; set; }
+
+    [Parameter] public EventCallback<MemoryMode> ValueChanged { get; set; }
+
+    private async Task SetMode(MemoryMode mode)
+    {
+        if (Value == mode) return;
+
+        Value = mode;
+        await ValueChanged.InvokeAsync(mode);
+    }
+}
