@@ -1,4 +1,5 @@
 using BlazorMemory.Components;
+using BlazorMemory.Core.Enums;
 using ChatApp.BlazorWasm.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -23,6 +24,45 @@ public partial class Chat
     private bool ShowMemoryPanel { get; set; } = true;
     private bool ShowConfig      { get; set; }
     private bool ApiKeySet => ChatService.HasApiKey;
+    private string MemoryHint => SelectedMemoryMode == MemoryMode.Semantic
+        ? "Facts are extracted into semantic memories and stored in your browser automatically."
+        : "Full conversation turns are stored verbatim in your browser automatically.";
+
+    private MemoryMode SelectedMemoryMode
+    {
+        get => ChatService.SelectedMemoryMode;
+        set => ChatService.SelectedMemoryMode = value;
+    }
+
+    private int QueryLimit
+    {
+        get => ChatService.QueryLimit;
+        set => ChatService.QueryLimit = Math.Clamp(value, 1, 20);
+    }
+
+    private float SimilarityThreshold
+    {
+        get => ChatService.SimilarityThreshold;
+        set => ChatService.SimilarityThreshold = Math.Clamp(value, 0f, 1f);
+    }
+
+    private int MaxAgeInDaysInput
+    {
+        get => ChatService.MaxAgeInDays ?? 0;
+        set => ChatService.MaxAgeInDays = value <= 0 ? null : value;
+    }
+
+    private bool IncludeStalenessScore
+    {
+        get => ChatService.IncludeStalenessScore;
+        set => ChatService.IncludeStalenessScore = value;
+    }
+
+    private int StalenessHalfLifeDays
+    {
+        get => ChatService.StalenessHalfLifeDays;
+        set => ChatService.StalenessHalfLifeDays = Math.Max(1, value);
+    }
 
     private ElementReference MessagesRef;
     private ElementReference InputRef;
@@ -89,6 +129,11 @@ public partial class Chat
     }
 
     private void ToggleMemoryPanel() => ShowMemoryPanel = !ShowMemoryPanel;
+
+    private void SetMemoryMode(MemoryMode mode)
+    {
+        SelectedMemoryMode = mode;
+    }
 
     private void ToggleConfig()
     {

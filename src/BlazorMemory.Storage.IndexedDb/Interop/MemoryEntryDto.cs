@@ -27,6 +27,9 @@ internal sealed class MemoryEntryDto
     [JsonPropertyName("learnedAt")]
     public required string LearnedAt { get; set; }   // ISO 8601
 
+    [JsonPropertyName("namespace")]
+    public string? Namespace { get; set; }
+
     [JsonPropertyName("updatedAt")]
     public string? UpdatedAt { get; set; }            // ISO 8601, nullable
 

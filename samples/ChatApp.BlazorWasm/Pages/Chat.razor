@@ -1,5 +1,6 @@
 @page "/"
 @using BlazorMemory.Components
+@using BlazorMemory.Core.Enums
 @using ChatApp.BlazorWasm.Models
 
 <PageTitle>BlazorMemory Demo</PageTitle>
@@ -8,6 +9,8 @@
 
     <MemoryPanel UserId="demo_user"
                  IsOpen="ShowMemoryPanel"
+                 Mode="SelectedMemoryMode"
+                 ModeChanged="SetMemoryMode"
                  @ref="_memoryPanel" />
 
     <main class="chat-area">
@@ -46,6 +49,52 @@
                            @bind="ApiKeyInput"
                            @bind:event="oninput" />
                     <button class="btn-save" @onclick="SaveApiKey">Save</button>
+                </div>
+                <div class="memory-options">
+                    <div class="option-group">
+                        <span class="option-label">Storage</span>
+                        <div class="option-segmented">
+                            <button class="option-segment @(SelectedMemoryMode == MemoryMode.Semantic ? "active" : "")"
+                                    @onclick="() => SetMemoryMode(MemoryMode.Semantic)">
+                                Semantic
+                            </button>
+                            <button class="option-segment @(SelectedMemoryMode == MemoryMode.Verbatim ? "active" : "")"
+                                    @onclick="() => SetMemoryMode(MemoryMode.Verbatim)">
+                                Verbatim
+                            </button>
+                        </div>
+                    </div>
+
+                    <label class="option-field">
+                        <span>Limit</span>
+                        <input type="number" min="1" max="20" @bind="QueryLimit" />
+                    </label>
+
+                    @if (SelectedMemoryMode == MemoryMode.Semantic)
+                    {
+                        <label class="option-field">
+                            <span>Threshold</span>
+                            <input type="number" min="0" max="1" step="0.05" @bind="SimilarityThreshold" />
+                        </label>
+
+                        <label class="option-field">
+                            <span>Max age</span>
+                            <input type="number" min="0" max="3650" @bind="MaxAgeInDaysInput" />
+                        </label>
+
+                        <label class="option-check">
+                            <input type="checkbox" @bind="IncludeStalenessScore" />
+                            <span>Staleness</span>
+                        </label>
+
+                        @if (IncludeStalenessScore)
+                        {
+                            <label class="option-field">
+                                <span>Half-life</span>
+                                <input type="number" min="1" max="3650" @bind="StalenessHalfLifeDays" />
+                            </label>
+                        }
+                    }
                 </div>
                 <p class="config-note">Your key is stored only in browser memory — never sent to any server except OpenAI.</p>
             </div>
@@ -140,7 +189,7 @@
                     </svg>
                 </button>
             </div>
-            <p class="input-hint">Memories are extracted and stored in your browser automatically.</p>
+            <p class="input-hint">@MemoryHint</p>
         </div>
 
     </main>

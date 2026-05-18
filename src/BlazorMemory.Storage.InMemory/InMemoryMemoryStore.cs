@@ -96,6 +96,7 @@ public static class InMemoryStorageExtensions
     public static BlazorMemoryBuilder UseInMemoryStorage(this BlazorMemoryBuilder builder)
     {
         builder.Services.AddScoped<IMemoryStore, InMemoryMemoryStore>();
+        builder.Services.AddScoped<IVerbatimStore, InMemoryVerbatimStore>();
         return builder;
     }
 }

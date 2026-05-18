@@ -57,6 +57,38 @@ public interface IMemoryService
         string json,
         string? @namespace = null,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Stores the original content exactly as provided, without extraction,
+    /// consolidation, or embedding.
+    /// </summary>
+    Task StoreVerbatimAsync(
+        string userId,
+        string content,
+        Dictionary<string, string>? metadata = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Searches verbatim memories using exact text matching. Empty query returns recent memories.
+    /// </summary>
+    Task<IReadOnlyList<VerbatimMemory>> SearchVerbatimAsync(
+        string userId,
+        string query,
+        int limit = 10,
+        CancellationToken ct = default);
+
+    Task DeleteVerbatimAsync(string id, CancellationToken ct = default);
+
+    Task ClearVerbatimAsync(string userId, CancellationToken ct = default);
+
+    Task<string> ExportVerbatimAsync(
+        string userId,
+        CancellationToken ct = default);
+
+    Task ImportVerbatimAsync(
+        string userId,
+        string json,
+        CancellationToken ct = default);
 }
 
 /// <summary>
@@ -108,4 +140,27 @@ public interface IMemoryExtractor
         string newFact,
         IReadOnlyList<MemoryEntry> similarMemories,
         CancellationToken ct = default);
+}
+
+/// <summary>
+/// Pluggable storage backend for verbatim memories.
+/// </summary>
+public interface IVerbatimStore
+{
+    Task StoreAsync(VerbatimMemory memory, CancellationToken ct = default);
+
+    Task<IReadOnlyList<VerbatimMemory>> SearchAsync(
+        string userId,
+        string query,
+        int limit = 10,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<VerbatimMemory>> GetRecentAsync(
+        string userId,
+        int limit = 20,
+        CancellationToken ct = default);
+
+    Task DeleteAsync(string id, CancellationToken ct = default);
+
+    Task ClearAsync(string userId, CancellationToken ct = default);
 }

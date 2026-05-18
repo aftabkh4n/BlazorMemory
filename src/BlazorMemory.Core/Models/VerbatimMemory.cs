@@ -1,14 +1,17 @@
 namespace BlazorMemory.Core.Models;
 
-public class VerbatimMemory
+/// <summary>
+/// A raw memory captured exactly as supplied by the caller.
+/// </summary>
+public sealed record VerbatimMemory
 {
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public required string Id { get; init; }
 
-    public string UserId { get; set; } = default!;
+    public required string UserId { get; init; }
 
-    public string Content { get; set; } = default!;
+    public required string Content { get; init; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; init; }
 
-    public Dictionary<string, string>? Metadata { get; set; }
+    public Dictionary<string, string> Metadata { get; init; } = [];
 }

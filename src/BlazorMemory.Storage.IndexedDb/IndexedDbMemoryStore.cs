@@ -67,6 +67,7 @@ public static class IndexedDbStorageExtensions
     public static BlazorMemoryBuilder UseIndexedDbStorage(this BlazorMemoryBuilder builder)
     {
         builder.Services.AddScoped<IMemoryStore, IndexedDbMemoryStore>();
+        builder.Services.AddScoped<IVerbatimStore, IndexedDbVerbatimStore>();
         return builder;
     }
 }

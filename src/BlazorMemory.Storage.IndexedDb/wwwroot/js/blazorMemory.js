@@ -11,8 +11,9 @@
  */
 
 const DB_NAME = 'BlazorMemoryDb';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'memories';
+const VERBATIM_STORE_NAME = 'verbatim_memories';
 
 // ─── Database Init ────────────────────────────────────────────────────────────
 
@@ -31,6 +32,12 @@ function openDb() {
                 const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
                 store.createIndex('userId', 'userId', { unique: false });
             }
+
+            if (!db.objectStoreNames.contains(VERBATIM_STORE_NAME)) {
+                const store = db.createObjectStore(VERBATIM_STORE_NAME, { keyPath: 'id' });
+                store.createIndex('userId', 'userId', { unique: false });
+                store.createIndex('createdAt', 'createdAt', { unique: false });
+            }
         };
 
         request.onsuccess = (event) => {
@@ -46,9 +53,9 @@ function openDb() {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function txStore(db, mode) {
-    const tx = db.transaction(STORE_NAME, mode);
-    return tx.objectStore(STORE_NAME);
+function txStore(db, mode, storeName = STORE_NAME) {
+    const tx = db.transaction(storeName, mode);
+    return tx.objectStore(storeName);
 }
 
 function promisify(request) {
@@ -166,4 +173,54 @@ export async function clearEntries(userId) {
     const index = store.index('userId');
     const keys = await promisify(index.getAllKeys(userId));
     await Promise.all(keys.map(key => promisify(store.delete(key))));
+}
+
+export async function storeVerbatimMemory(memory) {
+    const db = await openDb();
+    const store = txStore(db, 'readwrite', VERBATIM_STORE_NAME);
+    await promisify(store.put(memory));
+    return memory.id;
+}
+
+export async function searchVerbatimMemory(userId, query, limit) {
+    const memories = await getVerbatimByUser(userId);
+    const normalizedQuery = (query ?? '').toLowerCase();
+
+    return memories
+        .filter(memory => (memory.content ?? '').toLowerCase().includes(normalizedQuery))
+        .sort(sortVerbatimNewestFirst)
+        .slice(0, limit);
+}
+
+export async function getRecentVerbatimMemory(userId, limit) {
+    const memories = await getVerbatimByUser(userId);
+
+    return memories
+        .sort(sortVerbatimNewestFirst)
+        .slice(0, limit);
+}
+
+export async function deleteVerbatimMemory(id) {
+    const db = await openDb();
+    const store = txStore(db, 'readwrite', VERBATIM_STORE_NAME);
+    await promisify(store.delete(id));
+}
+
+export async function clearVerbatimMemory(userId) {
+    const db = await openDb();
+    const store = txStore(db, 'readwrite', VERBATIM_STORE_NAME);
+    const index = store.index('userId');
+    const keys = await promisify(index.getAllKeys(userId));
+    await Promise.all(keys.map(key => promisify(store.delete(key))));
+}
+
+async function getVerbatimByUser(userId) {
+    const db = await openDb();
+    const store = txStore(db, 'readonly', VERBATIM_STORE_NAME);
+    const index = store.index('userId');
+    return await promisify(index.getAll(userId));
+}
+
+function sortVerbatimNewestFirst(a, b) {
+    return new Date(b.createdAt) - new Date(a.createdAt);
 }

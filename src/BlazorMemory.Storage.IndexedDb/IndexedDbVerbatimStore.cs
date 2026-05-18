@@ -6,37 +6,61 @@ namespace BlazorMemory.Storage.IndexedDb;
 
 public class IndexedDbVerbatimStore : IVerbatimStore
 {
-    private readonly IJSRuntime _js;
+    private readonly Lazy<Task<IJSObjectReference>> _moduleTask;
+
+    private const string ModulePath = "./_content/BlazorMemory.Storage.IndexedDb/js/blazorMemory.js";
 
     public IndexedDbVerbatimStore(IJSRuntime js)
     {
-        _js = js;
+        _moduleTask = new Lazy<Task<IJSObjectReference>>(
+            () => js.InvokeAsync<IJSObjectReference>("import", ModulePath).AsTask());
     }
 
-    public async Task StoreAsync(VerbatimMemory memory)
+    public async Task StoreAsync(VerbatimMemory memory, CancellationToken ct = default)
     {
-        await _js.InvokeVoidAsync("storeVerbatimMemory", memory);
+        var module = await GetModuleAsync();
+        await module.InvokeVoidAsync("storeVerbatimMemory", ct, memory);
     }
 
     public async Task<IReadOnlyList<VerbatimMemory>> SearchAsync(
         string userId,
         string query,
-        int limit = 10)
+        int limit = 10,
+        CancellationToken ct = default)
     {
-        return await _js.InvokeAsync<List<VerbatimMemory>>(
+        var module = await GetModuleAsync();
+        return await module.InvokeAsync<List<VerbatimMemory>>(
             "searchVerbatimMemory",
+            ct,
             userId,
             query,
             limit);
     }
 
-    public async Task<IReadOnlyList<VerbatimMemory>> GetRecentAsync(string userId, int limit = 20)
+    public async Task<IReadOnlyList<VerbatimMemory>> GetRecentAsync(
+        string userId,
+        int limit = 20,
+        CancellationToken ct = default)
     {
-        return await SearchAsync(userId, "", limit);
+        var module = await GetModuleAsync();
+        return await module.InvokeAsync<List<VerbatimMemory>>(
+            "getRecentVerbatimMemory",
+            ct,
+            userId,
+            limit);
     }
 
-    public async Task DeleteAsync(string id)
+    public async Task DeleteAsync(string id, CancellationToken ct = default)
     {
-        await _js.InvokeVoidAsync("deleteVerbatimMemory", id);
+        var module = await GetModuleAsync();
+        await module.InvokeVoidAsync("deleteVerbatimMemory", ct, id);
     }
+
+    public async Task ClearAsync(string userId, CancellationToken ct = default)
+    {
+        var module = await GetModuleAsync();
+        await module.InvokeVoidAsync("clearVerbatimMemory", ct, userId);
+    }
+
+    private async Task<IJSObjectReference> GetModuleAsync() => await _moduleTask.Value;
 }

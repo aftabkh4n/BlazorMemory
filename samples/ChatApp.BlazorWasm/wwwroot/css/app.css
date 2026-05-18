@@ -379,6 +379,87 @@ html, body {
     font-family: var(--font-mono);
 }
 
+.memory-options {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 0 8px;
+}
+
+.option-group,
+.option-field,
+.option-check {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.option-label,
+.option-field span,
+.option-check span {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.option-segmented {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.option-segment {
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 12px;
+    padding: 7px 11px;
+    border-radius: 4px;
+}
+
+.option-segment:hover {
+    color: var(--text-primary);
+}
+
+.option-segment.active {
+    background: var(--accent);
+    color: white;
+}
+
+.option-field input {
+    width: 92px;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 7px 9px;
+    outline: none;
+}
+
+.option-field input:focus {
+    border-color: var(--accent);
+}
+
+.option-check {
+    flex-direction: row;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 4px;
+}
+
+.option-check input {
+    accent-color: var(--accent);
+}
+
 /* ── Messages ──────────────────────────────────────────────── */
 .messages-area {
     flex: 1;
@@ -732,13 +813,34 @@ html, body {
     min-width: var(--panel-width);
 }
 
+
 .bm-panel__header {
-    padding: 18px 20px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.bm-panel__header-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-shrink: 0;
+}
+
+
+.bm-memory-verbatim {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-height: 120px;
+    overflow-y: auto;
+    margin: 0;
+    line-height: 1.5;
 }
 
 .bm-panel__title {

@@ -87,6 +87,7 @@ internal sealed class IndexedDbInterop : IAsyncDisposable
         Content   = e.Content,
         Embedding = e.Embedding,
         LearnedAt = e.LearnedAt.ToString("O"),
+        Namespace = e.Namespace,
         UpdatedAt = e.UpdatedAt?.ToString("O"),
         Metadata  = e.Metadata
     };
@@ -98,6 +99,7 @@ internal sealed class IndexedDbInterop : IAsyncDisposable
         Content        = d.Content,
         Embedding      = d.Embedding,
         LearnedAt      = DateTimeOffset.Parse(d.LearnedAt),
+        Namespace      = d.Namespace,
         UpdatedAt      = d.UpdatedAt is null ? null : DateTimeOffset.Parse(d.UpdatedAt),
         Metadata       = d.Metadata,
         RelevanceScore = d.RelevanceScore

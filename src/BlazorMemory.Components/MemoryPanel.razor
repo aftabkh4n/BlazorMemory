@@ -1,6 +1,7 @@
 ﻿@using BlazorMemory.Core.Abstractions
 @using BlazorMemory.Core.Models
 @using BlazorMemory.Core.Enums
+@using System.Text.Json
 
 @inject IMemoryService MemoryService
 @inject IJSRuntime JS
@@ -8,16 +9,14 @@
 <div class="bm-panel @(IsOpen ? "bm-panel--open" : "")">
 
     <div class="bm-panel__header">
-        <div class="bm-panel__title">
-            <span class="bm-panel__icon">◈</span>
-            @Title
+        <div class="bm-panel__header-top">
+            <div class="bm-panel__title">
+                <span class="bm-panel__icon">◈</span>
+                @Title
+            </div>
+            <span class="bm-panel__count">@_memories.Count stored</span>
         </div>
-
-        <span class="bm-panel__count">
-            @_memories.Count stored
-        </span>
-
-        <MemoryModeToggle @bind-Value="_mode" />
+        <MemoryModeToggle Value="_mode" ValueChanged="SetModeAsync" />
     </div>
 
     <div class="bm-panel__body">
@@ -57,7 +56,7 @@
 
                         <div class="bm-memory-card__meta">
                             <span class="bm-memory-card__date">
-                                @FormatDate(memory.UpdatedAt ?? memory.LearnedAt)
+                                @FormatDate(memory.UpdatedAt)
                             </span>
 
                             @if (AllowDelete)
@@ -111,6 +110,8 @@
     [Parameter] public string? Namespace { get; set; }
 
     [Parameter] public bool IsOpen { get; set; } = true;
+    [Parameter] public MemoryMode? Mode { get; set; }
+    [Parameter] public EventCallback<MemoryMode> ModeChanged { get; set; }
     [Parameter] public string Title { get; set; } = "Memory Store";
     [Parameter] public string EmptyMessage { get; set; } = "No memories yet.";
 
@@ -123,7 +124,7 @@
     [Parameter] public EventCallback OnMemoriesCleared { get; set; }
     [Parameter] public EventCallback<int> OnImportCompleted { get; set; }
 
-    private List<MemoryEntry> _memories = new();
+    private List<PanelMemory> _memories = new();
     private bool _loading;
 
     private MemoryMode _mode = MemoryMode.Semantic;
@@ -136,6 +137,8 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        if (Mode.HasValue)
+            _mode = Mode.Value;
         await LoadAsync();
     }
 
@@ -147,19 +150,23 @@
         if (_mode == MemoryMode.Semantic)
         {
             var results = await MemoryService.ListAsync(UserId, Namespace);
-            _memories = results.ToList();
+            _memories = results
+                .Select(x => new PanelMemory(
+                    x.Id,
+                    x.Content,
+                    x.UpdatedAt ?? x.LearnedAt))
+                .ToList();
         }
         else
         {
             var results = await MemoryService.SearchVerbatimAsync(UserId, "", 200);
 
-            _memories = results.Select(x => new MemoryEntry
-            {
-                Id = x.Id,
-                Content = x.Content,
-                LearnedAt = x.CreatedAt,
-                UpdatedAt = x.CreatedAt
-            }).ToList();
+            _memories = results
+                .Select(x => new PanelMemory(
+                    x.Id,
+                    x.Content,
+                    x.CreatedAt))
+                .ToList();
         }
 
         _loading = false;
@@ -194,6 +201,9 @@
     private async Task ExportAsync()
     {
         var json = await MemoryService.ExportAsync(UserId, Namespace);
+        if (_mode == MemoryMode.Verbatim)
+            json = await MemoryService.ExportVerbatimAsync(UserId);
+
         var fileName = $"blazormemory-{UserId}-{DateTime.UtcNow:yyyyMMdd}.json";
 
         await JS.InvokeVoidAsync("BlazorMemoryExport.download", fileName, json);
@@ -210,11 +220,15 @@
 
         var before = _memories.Count;
 
-        if (_mode == MemoryMode.Semantic)
+        var importMode = DetectImportMode(json) ?? _mode;
+
+        if (importMode == MemoryMode.Semantic)
             await MemoryService.ImportAsync(UserId, json, Namespace);
         else
             await MemoryService.ImportVerbatimAsync(UserId, json);
 
+        _mode = importMode;
+        await ModeChanged.InvokeAsync(importMode);
         await LoadAsync();
 
         var imported = _memories.Count - before;
@@ -232,4 +246,69 @@
              : diff.TotalDays < 1 ? $"{(int)diff.TotalHours}h ago"
              : dt.ToLocalTime().ToString("MMM d");
     }
+
+    private async Task SetModeAsync(MemoryMode mode)
+    {
+        if (_mode == mode) return;
+
+        _mode = mode;
+        await ModeChanged.InvokeAsync(mode);
+        await LoadAsync();
+    }
+
+    private static MemoryMode? DetectImportMode(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        var first = root.ValueKind == JsonValueKind.Array
+            ? GetFirstArrayItem(root)
+            : TryGetProperty(root, "memories", out var memories)
+                ? GetFirstArrayItem(memories)
+                : null;
+
+        if (first is null) return null;
+
+        var item = first.Value;
+        if (HasProperty(item, "learnedAt"))
+            return MemoryMode.Semantic;
+        if (HasProperty(item, "createdAt"))
+            return MemoryMode.Verbatim;
+
+        return null;
+    }
+
+    private static JsonElement? GetFirstArrayItem(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Array) return null;
+
+        foreach (var item in element.EnumerateArray())
+            return item;
+
+        return null;
+    }
+
+    private static bool HasProperty(JsonElement element, string name)
+        => TryGetProperty(element, name, out _);
+
+    private static bool TryGetProperty(JsonElement element, string name, out JsonElement value)
+    {
+        value = default;
+        if (element.ValueKind != JsonValueKind.Object) return false;
+
+        foreach (var property in element.EnumerateObject())
+        {
+            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private sealed record PanelMemory(
+        string Id,
+        string Content,
+        DateTimeOffset UpdatedAt);
 }
