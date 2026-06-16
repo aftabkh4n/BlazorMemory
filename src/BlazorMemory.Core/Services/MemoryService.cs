@@ -72,6 +72,14 @@ public sealed class MemoryService : IMemoryService
                 .ToList();
         }
 
+        if (options.ApplyImportanceScore)
+        {
+            results = results
+                .Select(m => m.WithRelevanceScore((m.RelevanceScore ?? 0f) * m.ImportanceScore))
+                .OrderByDescending(m => m.RelevanceScore)
+                .ToList();
+        }
+
         return results;
     }
 
@@ -270,6 +278,30 @@ public sealed class MemoryService : IMemoryService
                 Metadata  = memory.Metadata
             }, ct);
         }
+    }
+
+    public async Task MarkImportantAsync(string memoryId, CancellationToken ct = default)
+        => await SetImportanceInternalAsync(memoryId, ImportanceLevels.Important, ct);
+
+    public async Task MarkUnimportantAsync(string memoryId, CancellationToken ct = default)
+        => await SetImportanceInternalAsync(memoryId, ImportanceLevels.Unimportant, ct);
+
+    public async Task ResetImportanceAsync(string memoryId, CancellationToken ct = default)
+        => await SetImportanceInternalAsync(memoryId, ImportanceLevels.Neutral, ct);
+
+    public async Task SetImportanceAsync(string memoryId, float score, CancellationToken ct = default)
+        => await SetImportanceInternalAsync(memoryId, score, ct);
+
+    private async Task SetImportanceInternalAsync(string memoryId, float score, CancellationToken ct)
+    {
+        var existing = await _store.GetAsync(memoryId, ct);
+        if (existing is null) return;
+
+        await _store.UpdateAsync(existing with
+        {
+            ImportanceScore = score,
+            UpdatedAt = DateTimeOffset.UtcNow
+        }, ct);
     }
 
     private IVerbatimStore GetVerbatimStore()

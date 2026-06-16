@@ -11,65 +11,57 @@ public sealed record MemoryEntry
     public required float[] Embedding { get; init; }
     public required DateTimeOffset LearnedAt { get; init; }
 
-    /// <summary>
-    /// Optional namespace for segmenting memories by topic or context.
-    /// Examples: "work", "personal", "project_alpha".
-    /// Null means the default/global namespace.
-    /// </summary>
     public string? Namespace { get; init; }
-
     public DateTimeOffset? UpdatedAt { get; init; }
     public Dictionary<string, string> Metadata { get; init; } = [];
 
     /// <summary>
-    /// Staleness score from 0.0 (fresh) to 1.0 (very stale).
-    /// Only populated when QueryOptions.IncludeStalenessScore = true.
+    /// Importance score from user feedback. 1.0 = neutral (default),
+    /// 1.5 = marked important (thumbs up),
+    /// 0.3 = marked unimportant (thumbs down).
+    /// Used as a multiplier on cosine similarity during search.
     /// </summary>
-    public float? StalenessScore { get; init; }
+    public float ImportanceScore { get; init; } = 1.0f;
 
-    /// <summary>
-    /// Cosine similarity score from the last vector search (0.0–1.0).
-    /// Only populated on query results.
-    /// </summary>
+    public float? StalenessScore { get; init; }
     public float? RelevanceScore { get; init; }
 
     public MemoryEntry WithStalenessScore(float score) => this with { StalenessScore = score };
     public MemoryEntry WithRelevanceScore(float score) => this with { RelevanceScore = score };
+    public MemoryEntry WithImportanceScore(float score) => this with { ImportanceScore = score };
 }
 
 /// <summary>
-/// Options for querying memories.
+/// Standard importance values for user feedback.
 /// </summary>
+public static class ImportanceLevels
+{
+    public const float Important   = 1.5f;
+    public const float Neutral     = 1.0f;
+    public const float Unimportant = 0.3f;
+}
+
 public sealed record QueryOptions
 {
     public int   Limit     { get; init; } = 5;
     public float Threshold { get; init; } = 0.7f;
-
-    /// <summary>Ignore memories older than N days. Null = no age limit.</summary>
     public int? MaxAgeInDays { get; init; }
-
-    /// <summary>
-    /// When true, a StalenessScore is calculated and attached to each result.
-    /// </summary>
     public bool IncludeStalenessScore  { get; init; } = false;
     public int  StalenessHalfLifeDays  { get; init; } = 30;
+    public string? Namespace { get; init; }
 
     /// <summary>
-    /// Filter results to a specific namespace.
-    /// Null returns memories from all namespaces.
+    /// When true, ImportanceScore is applied as a multiplier on the relevance score.
+    /// Default true.
     /// </summary>
-    public string? Namespace { get; init; }
+    public bool ApplyImportanceScore { get; init; } = true;
 }
 
-/// <summary>
-/// The result of a consolidation decision returned by the LLM extractor.
-/// </summary>
 public sealed record ConsolidationDecision
 {
     public required ConsolidationAction Action { get; init; }
     public string? UpdatedContent  { get; init; }
     public string? TargetMemoryId  { get; init; }
-
     public static ConsolidationDecision Add()    => new() { Action = ConsolidationAction.Add };
     public static ConsolidationDecision None()   => new() { Action = ConsolidationAction.None };
     public static ConsolidationDecision Update(string targetId, string updatedContent) =>

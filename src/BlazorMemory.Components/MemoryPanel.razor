@@ -41,7 +41,7 @@
 
                 @foreach (var memory in _memories)
                 {
-                    <div class="bm-memory-card">
+                    <div class="bm-memory-card @GetImportanceClass(memory.ImportanceScore)">
 
                         <div class="bm-memory-card__content">
                             @if (_mode == MemoryMode.Verbatim)
@@ -59,14 +59,24 @@
                                 @FormatDate(memory.UpdatedAt)
                             </span>
 
-                            @if (AllowDelete)
-                            {
-                                <button class="bm-memory-card__delete"
-                                        @onclick="() => DeleteMemoryAsync(memory.Id)"
-                                        title="Delete memory">
-                                    ✕
-                                </button>
-                            }
+                            <div class="bm-memory-card__actions">
+                                @if (AllowFeedback && _mode == MemoryMode.Semantic)
+                                {
+                                    <button class="bm-feedback @(memory.ImportanceScore > 1f ? "bm-feedback--active" : "")"
+                                            @onclick="() => MarkImportantAsync(memory.Id)"
+                                            title="Important">👍</button>
+                                    <button class="bm-feedback @(memory.ImportanceScore < 1f ? "bm-feedback--active-down" : "")"
+                                            @onclick="() => MarkUnimportantAsync(memory.Id)"
+                                            title="Unimportant">👎</button>
+                                }
+
+                                @if (AllowDelete)
+                                {
+                                    <button class="bm-memory-card__delete"
+                                            @onclick="() => DeleteMemoryAsync(memory.Id)"
+                                            title="Delete memory">✕</button>
+                                }
+                            </div>
                         </div>
 
                     </div>
@@ -77,14 +87,10 @@
     </div>
 
     <div class="bm-panel__footer">
-
         @if (AllowExport && _memories.Count > 0)
         {
-            <button class="bm-btn-action" @onclick="ExportAsync">
-                Export
-            </button>
+            <button class="bm-btn-action" @onclick="ExportAsync">Export</button>
         }
-
         @if (AllowImport)
         {
             <label class="bm-btn-action">
@@ -92,53 +98,44 @@
                 <InputFile OnChange="ImportAsync" accept=".json" style="display:none" />
             </label>
         }
-
         @if (AllowClear && _memories.Count > 0)
         {
-            <button class="bm-btn-clear" @onclick="ClearAsync">
-                Clear all
-            </button>
+            <button class="bm-btn-clear" @onclick="ClearAsync">Clear all</button>
         }
-
     </div>
 
 </div>
 
 @code {
-
     [Parameter, EditorRequired] public string UserId { get; set; } = string.Empty;
     [Parameter] public string? Namespace { get; set; }
-
     [Parameter] public bool IsOpen { get; set; } = true;
     [Parameter] public MemoryMode? Mode { get; set; }
     [Parameter] public EventCallback<MemoryMode> ModeChanged { get; set; }
     [Parameter] public string Title { get; set; } = "Memory Store";
     [Parameter] public string EmptyMessage { get; set; } = "No memories yet.";
 
-    [Parameter] public bool AllowDelete { get; set; } = true;
-    [Parameter] public bool AllowClear { get; set; } = true;
-    [Parameter] public bool AllowExport { get; set; } = true;
-    [Parameter] public bool AllowImport { get; set; } = true;
+    [Parameter] public bool AllowDelete   { get; set; } = true;
+    [Parameter] public bool AllowClear    { get; set; } = true;
+    [Parameter] public bool AllowExport   { get; set; } = true;
+    [Parameter] public bool AllowImport   { get; set; } = true;
+    [Parameter] public bool AllowFeedback { get; set; } = true;
 
-    [Parameter] public EventCallback<string> OnMemoryDeleted { get; set; }
-    [Parameter] public EventCallback OnMemoriesCleared { get; set; }
-    [Parameter] public EventCallback<int> OnImportCompleted { get; set; }
+    [Parameter] public EventCallback<string> OnMemoryDeleted   { get; set; }
+    [Parameter] public EventCallback         OnMemoriesCleared { get; set; }
+    [Parameter] public EventCallback<int>    OnImportCompleted { get; set; }
+    [Parameter] public EventCallback<string> OnMemoryMarkedImportant   { get; set; }
+    [Parameter] public EventCallback<string> OnMemoryMarkedUnimportant { get; set; }
 
     private List<PanelMemory> _memories = new();
     private bool _loading;
-
     private MemoryMode _mode = MemoryMode.Semantic;
 
-    public async Task RefreshAsync()
-    {
-        await LoadAsync();
-        StateHasChanged();
-    }
+    public async Task RefreshAsync() { await LoadAsync(); StateHasChanged(); }
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Mode.HasValue)
-            _mode = Mode.Value;
+        if (Mode.HasValue) _mode = Mode.Value;
         await LoadAsync();
     }
 
@@ -151,61 +148,75 @@
         {
             var results = await MemoryService.ListAsync(UserId, Namespace);
             _memories = results
-                .Select(x => new PanelMemory(
-                    x.Id,
-                    x.Content,
-                    x.UpdatedAt ?? x.LearnedAt))
+                .Select(x => new PanelMemory(x.Id, x.Content, x.UpdatedAt ?? x.LearnedAt, x.ImportanceScore))
                 .ToList();
         }
         else
         {
             var results = await MemoryService.SearchVerbatimAsync(UserId, "", 200);
-
             _memories = results
-                .Select(x => new PanelMemory(
-                    x.Id,
-                    x.Content,
-                    x.CreatedAt))
+                .Select(x => new PanelMemory(x.Id, x.Content, x.CreatedAt, 1.0f))
                 .ToList();
         }
 
         _loading = false;
     }
 
+    private async Task MarkImportantAsync(string id)
+    {
+        var current = _memories.FirstOrDefault(m => m.Id == id);
+        if (current is null) return;
+
+        // Toggle: if already important, reset to neutral
+        if (current.ImportanceScore > 1f)
+            await MemoryService.ResetImportanceAsync(id);
+        else
+            await MemoryService.MarkImportantAsync(id);
+
+        await OnMemoryMarkedImportant.InvokeAsync(id);
+        await LoadAsync();
+        StateHasChanged();
+    }
+
+    private async Task MarkUnimportantAsync(string id)
+    {
+        var current = _memories.FirstOrDefault(m => m.Id == id);
+        if (current is null) return;
+
+        if (current.ImportanceScore < 1f)
+            await MemoryService.ResetImportanceAsync(id);
+        else
+            await MemoryService.MarkUnimportantAsync(id);
+
+        await OnMemoryMarkedUnimportant.InvokeAsync(id);
+        await LoadAsync();
+        StateHasChanged();
+    }
+
     private async Task DeleteMemoryAsync(string id)
     {
-        if (_mode == MemoryMode.Semantic)
-            await MemoryService.DeleteAsync(id);
-        else
-            await MemoryService.DeleteVerbatimAsync(id);
-
+        if (_mode == MemoryMode.Semantic) await MemoryService.DeleteAsync(id);
+        else                              await MemoryService.DeleteVerbatimAsync(id);
         _memories.RemoveAll(m => m.Id == id);
-
         await OnMemoryDeleted.InvokeAsync(id);
         StateHasChanged();
     }
 
     private async Task ClearAsync()
     {
-        if (_mode == MemoryMode.Semantic)
-            await MemoryService.ClearAsync(UserId, Namespace);
-        else
-            await MemoryService.ClearVerbatimAsync(UserId);
-
+        if (_mode == MemoryMode.Semantic) await MemoryService.ClearAsync(UserId, Namespace);
+        else                              await MemoryService.ClearVerbatimAsync(UserId);
         _memories.Clear();
-
         await OnMemoriesCleared.InvokeAsync();
         StateHasChanged();
     }
 
     private async Task ExportAsync()
     {
-        var json = await MemoryService.ExportAsync(UserId, Namespace);
-        if (_mode == MemoryMode.Verbatim)
-            json = await MemoryService.ExportVerbatimAsync(UserId);
-
+        var json = _mode == MemoryMode.Verbatim
+            ? await MemoryService.ExportVerbatimAsync(UserId)
+            : await MemoryService.ExportAsync(UserId, Namespace);
         var fileName = $"blazormemory-{UserId}-{DateTime.UtcNow:yyyyMMdd}.json";
-
         await JS.InvokeVoidAsync("BlazorMemoryExport.download", fileName, json);
     }
 
@@ -217,43 +228,41 @@
         using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
         using var reader = new StreamReader(stream);
         var json = await reader.ReadToEndAsync();
-
         var before = _memories.Count;
-
         var importMode = DetectImportMode(json) ?? _mode;
 
-        if (importMode == MemoryMode.Semantic)
-            await MemoryService.ImportAsync(UserId, json, Namespace);
-        else
-            await MemoryService.ImportVerbatimAsync(UserId, json);
+        if (importMode == MemoryMode.Semantic) await MemoryService.ImportAsync(UserId, json, Namespace);
+        else                                   await MemoryService.ImportVerbatimAsync(UserId, json);
 
         _mode = importMode;
         await ModeChanged.InvokeAsync(importMode);
         await LoadAsync();
-
-        var imported = _memories.Count - before;
-        await OnImportCompleted.InvokeAsync(imported);
-
+        await OnImportCompleted.InvokeAsync(_memories.Count - before);
         StateHasChanged();
-    }
-
-    private static string FormatDate(DateTimeOffset dt)
-    {
-        var diff = DateTimeOffset.UtcNow - dt;
-
-        return diff.TotalMinutes < 1 ? "just now"
-             : diff.TotalHours < 1 ? $"{(int)diff.TotalMinutes}m ago"
-             : diff.TotalDays < 1 ? $"{(int)diff.TotalHours}h ago"
-             : dt.ToLocalTime().ToString("MMM d");
     }
 
     private async Task SetModeAsync(MemoryMode mode)
     {
         if (_mode == mode) return;
-
         _mode = mode;
         await ModeChanged.InvokeAsync(mode);
         await LoadAsync();
+    }
+
+    private static string GetImportanceClass(float score) => score switch
+    {
+        > 1f => "bm-memory-card--important",
+        < 1f => "bm-memory-card--unimportant",
+        _    => ""
+    };
+
+    private static string FormatDate(DateTimeOffset dt)
+    {
+        var diff = DateTimeOffset.UtcNow - dt;
+        return diff.TotalMinutes < 1 ? "just now"
+             : diff.TotalHours   < 1 ? $"{(int)diff.TotalMinutes}m ago"
+             : diff.TotalDays    < 1 ? $"{(int)diff.TotalHours}h ago"
+             : dt.ToLocalTime().ToString("MMM d");
     }
 
     private static MemoryMode? DetectImportMode(string json)
@@ -262,53 +271,34 @@
         var root = doc.RootElement;
         var first = root.ValueKind == JsonValueKind.Array
             ? GetFirstArrayItem(root)
-            : TryGetProperty(root, "memories", out var memories)
-                ? GetFirstArrayItem(memories)
-                : null;
-
+            : TryGetProperty(root, "memories", out var memories) ? GetFirstArrayItem(memories) : null;
         if (first is null) return null;
-
         var item = first.Value;
-        if (HasProperty(item, "learnedAt"))
-            return MemoryMode.Semantic;
-        if (HasProperty(item, "createdAt"))
-            return MemoryMode.Verbatim;
-
+        if (HasProperty(item, "learnedAt")) return MemoryMode.Semantic;
+        if (HasProperty(item, "createdAt")) return MemoryMode.Verbatim;
         return null;
     }
 
     private static JsonElement? GetFirstArrayItem(JsonElement element)
     {
         if (element.ValueKind != JsonValueKind.Array) return null;
-
-        foreach (var item in element.EnumerateArray())
-            return item;
-
+        foreach (var item in element.EnumerateArray()) return item;
         return null;
     }
 
-    private static bool HasProperty(JsonElement element, string name)
-        => TryGetProperty(element, name, out _);
+    private static bool HasProperty(JsonElement element, string name) => TryGetProperty(element, name, out _);
 
     private static bool TryGetProperty(JsonElement element, string name, out JsonElement value)
     {
         value = default;
         if (element.ValueKind != JsonValueKind.Object) return false;
-
         foreach (var property in element.EnumerateObject())
         {
             if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
-            {
-                value = property.Value;
-                return true;
-            }
+            { value = property.Value; return true; }
         }
-
         return false;
     }
 
-    private sealed record PanelMemory(
-        string Id,
-        string Content,
-        DateTimeOffset UpdatedAt);
+    private sealed record PanelMemory(string Id, string Content, DateTimeOffset UpdatedAt, float ImportanceScore);
 }
