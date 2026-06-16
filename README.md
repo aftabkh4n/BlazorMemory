@@ -1,19 +1,8 @@
-<div align="center">
-
 # BlazorMemory
 
 **Give your .NET AI assistant persistent memory.**
 
-[![NuGet](https://img.shields.io/nuget/v/BlazorMemory?color=5b8af0&label=NuGet)](https://www.nuget.org/packages/BlazorMemory)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/BlazorMemory?color=3ecf8e)](https://www.nuget.org/packages/BlazorMemory)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com)
-
-![BlazorMemory Demo](assets/demo.gif)
-
-</div>
-
----
+![BlazorMemory Demo](https://raw.githubusercontent.com/aftabkh4n/BlazorMemory/main/assets/demo.gif)
 
 BlazorMemory sits between your chat logic and your LLM. It extracts facts from conversations, stores them as vector embeddings, and injects relevant context into future prompts. Your assistant remembers the user across sessions.
 
@@ -43,18 +32,14 @@ public class ChatService(IMemoryService memory)
 {
     public async Task<string> ChatAsync(string message, string userId)
     {
-        // Pull relevant memories
         var memories = await memory.QueryAsync(message, userId,
             new QueryOptions { Limit = 5, Threshold = 0.65f });
 
-        // Build system prompt
         var context = string.Join("\n", memories.Select(m => $"- {m.Content}"));
         var prompt  = $"You are a helpful assistant.\n\nWhat you know:\n{context}";
 
-        // Call your LLM
         var reply = await CallLlmAsync(prompt, message);
 
-        // Extract and store new facts
         await memory.ExtractAsync($"User: {message}\nAssistant: {reply}", userId);
 
         return reply;
@@ -64,8 +49,6 @@ public class ChatService(IMemoryService memory)
 
 ## Drop-in component
 
-Add the memory panel to your UI with one line:
-
 ```bash
 dotnet add package BlazorMemory.Components
 ```
@@ -74,25 +57,35 @@ dotnet add package BlazorMemory.Components
 <MemoryPanel UserId="@userId" IsOpen="true" />
 ```
 
-The panel shows stored memories, handles delete and clear, and has built-in export and import buttons. No extra wiring.
+The panel shows stored memories, handles delete and clear, has built-in export and import buttons, and thumbs up/down feedback to control which memories matter most.
+
+## Relevance feedback (v0.5.0)
+
+Users can mark memories as important or unimportant. Important memories get boosted in search results. Unimportant ones get down-ranked but not deleted.
+
+```csharp
+await memory.MarkImportantAsync(memoryId);
+await memory.MarkUnimportantAsync(memoryId);
+await memory.ResetImportanceAsync(memoryId);
+```
+
+## Verbatim storage mode
+
+For cases where extraction loses important context, store conversations verbatim:
+
+```csharp
+await memory.StoreVerbatimAsync(userId, conversation);
+var results = await memory.SearchVerbatimAsync(userId, query, topK: 5);
+```
 
 ## Export and import
 
-Users can download their memories as JSON and restore them later:
-
 ```csharp
-// Export
 var json = await memory.ExportAsync(userId);
-
-// Import
 await memory.ImportAsync(userId, json);
 ```
 
-Embeddings are excluded from the export and re-generated on import. This keeps the file small and makes imports work regardless of which embedding provider the target app uses.
-
 ## Namespaces
-
-Scope memories by topic:
 
 ```csharp
 await memory.ExtractAsync(conversation, userId, namespace: "work");
@@ -137,36 +130,12 @@ builder.Services
 |---------|-------------|
 | `BlazorMemory` | Core library |
 | `BlazorMemory.Components` | Drop-in MemoryPanel component |
-| `BlazorMemory.Storage.IndexedDb` | Browser storage, no backend needed |
+| `BlazorMemory.Storage.IndexedDb` | Browser storage, no backend |
 | `BlazorMemory.Storage.InMemory` | For testing |
 | `BlazorMemory.Storage.EfCore` | SQL Server, PostgreSQL, SQLite |
 | `BlazorMemory.Embeddings.OpenAi` | OpenAI text-embedding-3-small |
 | `BlazorMemory.Extractor.OpenAi` | OpenAI gpt-4o-mini |
 | `BlazorMemory.Extractor.Anthropic` | Anthropic Claude |
-
-## Run the sample app
-
-```bash
-git clone https://github.com/aftabkh4n/BlazorMemory
-cd BlazorMemory/samples/ChatApp.BlazorWasm
-dotnet run
-```
-
-Open `http://localhost:5000`, enter your OpenAI key, and start chatting.
-
-## Run the tests
-
-```bash
-dotnet test
-```
-
-38 tests across 4 test projects.
-
-## Roadmap
-
-- [ ] Relevance feedback ("forget this" / "this is important")
-- [ ] pgvector support for PostgreSQL
-- [ ] More Blazor components
 
 ## License
 
