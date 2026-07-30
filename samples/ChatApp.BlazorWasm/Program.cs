@@ -15,7 +15,8 @@ builder.Services
     .AddBlazorMemory()
     .UseIndexedDbStorage()
     .UseOpenAiEmbeddings(string.Empty)   // lazy — safe with empty key at startup
-    .UseOpenAiExtractor(string.Empty);   // lazy — safe with empty key at startup
+    .UseOpenAiExtractor(string.Empty)    // lazy — safe with empty key at startup
+    .UseMemoryEnabledChat();
 
 builder.Services.AddScoped<ChatService>();
 

@@ -37,6 +37,16 @@ public sealed class BlazorMemoryBuilder
         Services.AddScoped<IMemoryExtractor, TExtractor>();
         return this;
     }
+
+    /// <summary>
+    /// Registers <see cref="MemoryEnabledChat"/> for injection. It wraps an LLM call with
+    /// automatic memory retrieval and extraction so callers don't write the boilerplate.
+    /// </summary>
+    public BlazorMemoryBuilder UseMemoryEnabledChat()
+    {
+        Services.AddScoped<MemoryEnabledChat>();
+        return this;
+    }
 }
 
 /// <summary>

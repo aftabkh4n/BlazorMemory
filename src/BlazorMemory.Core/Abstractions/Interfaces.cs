@@ -37,6 +37,18 @@ public interface IMemoryService
 
     /// <summary>Sets a custom importance score (typical range 0.0 to 2.0).</summary>
     Task SetImportanceAsync(string memoryId, float score, CancellationToken ct = default);
+
+    /// <summary>
+    /// Convenience wrapper: queries relevant memories, injects them into the system prompt,
+    /// calls <paramref name="llmCall"/>, extracts new memories, and returns the reply.
+    /// </summary>
+    Task<string> ChatWithMemoryAsync(
+        string userMessage,
+        string userId,
+        Func<string, string, Task<string>> llmCall,
+        QueryOptions? queryOptions = null,
+        string? @namespace = null,
+        CancellationToken ct = default);
 }
 
 public interface IMemoryStore

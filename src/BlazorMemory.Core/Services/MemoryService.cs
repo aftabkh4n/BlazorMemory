@@ -280,6 +280,34 @@ public sealed class MemoryService : IMemoryService
         }
     }
 
+    public async Task<string> ChatWithMemoryAsync(
+        string userMessage,
+        string userId,
+        Func<string, string, Task<string>> llmCall,
+        QueryOptions? queryOptions = null,
+        string? @namespace = null,
+        CancellationToken ct = default)
+    {
+        var opts = queryOptions ?? new QueryOptions();
+        if (@namespace is not null)
+            opts = opts with { Namespace = @namespace };
+
+        var memories     = await QueryAsync(userMessage, userId, opts, ct);
+        var systemPrompt = BuildChatSystemPrompt(memories);
+        var reply        = await llmCall(systemPrompt, userMessage);
+
+        try
+        {
+            await ExtractAsync($"User: {userMessage}\nAssistant: {reply}", userId, @namespace, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Memory extraction failed after chat.");
+        }
+
+        return reply;
+    }
+
     public async Task MarkImportantAsync(string memoryId, CancellationToken ct = default)
         => await SetImportanceInternalAsync(memoryId, ImportanceLevels.Important, ct);
 
@@ -302,6 +330,19 @@ public sealed class MemoryService : IMemoryService
             ImportanceScore = score,
             UpdatedAt = DateTimeOffset.UtcNow
         }, ct);
+    }
+
+    private static string BuildChatSystemPrompt(IReadOnlyList<MemoryEntry> memories)
+    {
+        const string basePrompt =
+            "You are a helpful, friendly assistant with persistent memory.\n" +
+            "You remember things about the user from previous conversations.\n" +
+            "Use memories naturally -- don't recite them verbatim, just let them inform your responses.\n" +
+            "If you learn something new about the user, acknowledge it warmly.";
+
+        if (memories.Count == 0) return basePrompt;
+        var memoryBlock = string.Join("\n", memories.Select(m => $"- {m.Content}"));
+        return $"{basePrompt}\n\nWhat you remember about this user:\n{memoryBlock}";
     }
 
     private IVerbatimStore GetVerbatimStore()
