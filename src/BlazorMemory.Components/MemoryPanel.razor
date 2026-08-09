@@ -60,7 +60,7 @@
                             </span>
 
                             <div class="bm-memory-card__actions">
-                                @if (AllowFeedback && _mode == MemoryMode.Semantic)
+                                @if (AllowFeedback)
                                 {
                                     <button class="bm-feedback @(memory.ImportanceScore > 1f ? "bm-feedback--active" : "")"
                                             @onclick="() => MarkImportantAsync(memory.Id)"
@@ -155,7 +155,7 @@
         {
             var results = await MemoryService.SearchVerbatimAsync(UserId, "", 200);
             _memories = results
-                .Select(x => new PanelMemory(x.Id, x.Content, x.CreatedAt, 1.0f))
+                .Select(x => new PanelMemory(x.Id, x.Content, x.CreatedAt, x.ImportanceScore))
                 .ToList();
         }
 
@@ -167,11 +167,16 @@
         var current = _memories.FirstOrDefault(m => m.Id == id);
         if (current is null) return;
 
-        // Toggle: if already important, reset to neutral
-        if (current.ImportanceScore > 1f)
-            await MemoryService.ResetImportanceAsync(id);
+        if (_mode == MemoryMode.Verbatim)
+        {
+            if (current.ImportanceScore > 1f) await MemoryService.ResetVerbatimImportanceAsync(id);
+            else                              await MemoryService.MarkVerbatimImportantAsync(id);
+        }
         else
-            await MemoryService.MarkImportantAsync(id);
+        {
+            if (current.ImportanceScore > 1f) await MemoryService.ResetImportanceAsync(id);
+            else                              await MemoryService.MarkImportantAsync(id);
+        }
 
         await OnMemoryMarkedImportant.InvokeAsync(id);
         await LoadAsync();
@@ -183,10 +188,16 @@
         var current = _memories.FirstOrDefault(m => m.Id == id);
         if (current is null) return;
 
-        if (current.ImportanceScore < 1f)
-            await MemoryService.ResetImportanceAsync(id);
+        if (_mode == MemoryMode.Verbatim)
+        {
+            if (current.ImportanceScore < 1f) await MemoryService.ResetVerbatimImportanceAsync(id);
+            else                              await MemoryService.MarkVerbatimUnimportantAsync(id);
+        }
         else
-            await MemoryService.MarkUnimportantAsync(id);
+        {
+            if (current.ImportanceScore < 1f) await MemoryService.ResetImportanceAsync(id);
+            else                              await MemoryService.MarkUnimportantAsync(id);
+        }
 
         await OnMemoryMarkedUnimportant.InvokeAsync(id);
         await LoadAsync();

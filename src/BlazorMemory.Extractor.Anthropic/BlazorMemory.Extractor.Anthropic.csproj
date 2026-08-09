@@ -2,12 +2,11 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<PackageId>BlazorMemory.Extractor.Anthropic</PackageId>
-		<Version>0.7.0</Version>
+		<Version>0.8.0</Version>
 		<Description>Anthropic Claude-powered fact extractor and memory consolidator for BlazorMemory. Uses claude-haiku by default.</Description>
 		<PackageTags>blazor;ai;memory;anthropic;claude;extraction;llm</PackageTags>
 	</PropertyGroup>
 	<ItemGroup>
-		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
 		<ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
 		<PackageReference Include="Anthropic.SDK" Version="4.1.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />

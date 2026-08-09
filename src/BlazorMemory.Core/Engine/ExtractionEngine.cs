@@ -26,6 +26,9 @@ public sealed class ExtractionEngine
         _logger     = logger;
     }
 
+    public Task<string> SummarizeAsync(IReadOnlyList<MemoryEntry> memories, CancellationToken ct = default)
+        => _extractor.SummarizeAsync(memories, ct);
+
     public async Task RunAsync(
         string conversation,
         string userId,

@@ -98,6 +98,23 @@ public sealed class AnthropicMemoryExtractor : IMemoryExtractor
         return ParseDecision(raw);
     }
 
+    public async Task<string> SummarizeAsync(
+        IReadOnlyList<MemoryEntry> memories, CancellationToken ct = default)
+    {
+        var facts = string.Join("\n", memories.Select(m => $"- {m.Content}"));
+        var prompt = $"Summarize these facts about a user into a single concise paragraph. Start with 'User background:'. Facts:\n{facts}";
+
+        var request = new MessageParameters
+        {
+            Model     = _options.Model,
+            MaxTokens = _options.MaxTokens,
+            Messages  = new List<Message> { new Message(RoleType.User, prompt) }
+        };
+
+        var response = await CreateClient().Messages.GetClaudeMessageAsync(request, ct);
+        return response.Message.ToString().Trim();
+    }
+
     private static ConsolidationDecision ParseDecision(string json)
     {
         try

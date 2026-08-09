@@ -27,6 +27,10 @@ public interface IMemoryService
     Task ImportVerbatimAsync(string userId, string json, CancellationToken ct = default);
 
     /// <summary>Marks a memory as important (boosts relevance in search).</summary>
+    Task MarkVerbatimImportantAsync(string memoryId, CancellationToken ct = default);
+    Task MarkVerbatimUnimportantAsync(string memoryId, CancellationToken ct = default);
+    Task ResetVerbatimImportanceAsync(string memoryId, CancellationToken ct = default);
+
     Task MarkImportantAsync(string memoryId, CancellationToken ct = default);
 
     /// <summary>Marks a memory as unimportant (down-ranks in search, does not delete).</summary>
@@ -37,6 +41,17 @@ public interface IMemoryService
 
     /// <summary>Sets a custom importance score (typical range 0.0 to 2.0).</summary>
     Task SetImportanceAsync(string memoryId, float score, CancellationToken ct = default);
+
+    /// <summary>
+    /// Collapses memories older than the most recent <paramref name="keepRecent"/> into a single
+    /// "[Summary]" entry when the total count exceeds <paramref name="maxMemories"/>.
+    /// </summary>
+    Task SummarizeOldMemoriesAsync(
+        string userId,
+        int maxMemories = 50,
+        int keepRecent = 20,
+        string? @namespace = null,
+        CancellationToken ct = default);
 
     /// <summary>
     /// Convenience wrapper: queries relevant memories, injects them into the system prompt,
@@ -78,6 +93,7 @@ public interface IMemoryExtractor
 {
     Task<IReadOnlyList<string>> ExtractFactsAsync(string conversation, CancellationToken ct = default);
     Task<ConsolidationDecision> ConsolidateAsync(string newFact, IReadOnlyList<MemoryEntry> similarMemories, CancellationToken ct = default);
+    Task<string> SummarizeAsync(IReadOnlyList<MemoryEntry> memories, CancellationToken ct = default);
 }
 
 public interface IVerbatimStore
@@ -87,4 +103,5 @@ public interface IVerbatimStore
     Task<IReadOnlyList<VerbatimMemory>> GetRecentAsync(string userId, int limit = 20, CancellationToken ct = default);
     Task DeleteAsync(string id, CancellationToken ct = default);
     Task ClearAsync(string userId, CancellationToken ct = default);
+    Task UpdateImportanceAsync(string id, float score, CancellationToken ct = default);
 }

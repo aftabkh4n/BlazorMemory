@@ -10,6 +10,7 @@
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>false</IncludeSymbols>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>blazormemory-icon.png</PackageIcon>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
@@ -17,6 +18,9 @@
 
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\README.md"
+          Pack="true"
+          PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)..\assets\blazormemory-icon.png"
           Pack="true"
           PackagePath="\" />
   </ItemGroup>

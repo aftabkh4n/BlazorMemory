@@ -62,5 +62,11 @@ public class IndexedDbVerbatimStore : IVerbatimStore
         await module.InvokeVoidAsync("clearVerbatimMemory", ct, userId);
     }
 
+    public async Task UpdateImportanceAsync(string id, float score, CancellationToken ct = default)
+    {
+        var module = await GetModuleAsync();
+        await module.InvokeVoidAsync("updateVerbatimImportance", ct, id, score);
+    }
+
     private async Task<IJSObjectReference> GetModuleAsync() => await _moduleTask.Value;
 }

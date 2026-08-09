@@ -80,4 +80,21 @@ public class InMemoryVerbatimStore : IVerbatimStore
         lock (_lock) _store.TryRemove(userId, out _);
         return Task.CompletedTask;
     }
+
+    public Task UpdateImportanceAsync(string id, float score, CancellationToken ct = default)
+    {
+        lock (_lock)
+        {
+            foreach (var list in _store.Values)
+            {
+                var idx = list.FindIndex(x => x.Id == id);
+                if (idx >= 0)
+                {
+                    list[idx] = list[idx] with { ImportanceScore = score };
+                    break;
+                }
+            }
+        }
+        return Task.CompletedTask;
+    }
 }

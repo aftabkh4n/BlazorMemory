@@ -14,4 +14,6 @@ public sealed record VerbatimMemory
     public required DateTimeOffset CreatedAt { get; init; }
 
     public Dictionary<string, string> Metadata { get; init; } = [];
+
+    public float ImportanceScore { get; init; } = 1.0f;
 }

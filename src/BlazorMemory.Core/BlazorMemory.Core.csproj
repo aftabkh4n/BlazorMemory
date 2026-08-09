@@ -2,12 +2,11 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<PackageId>BlazorMemory</PackageId>
-		<Version>0.7.0</Version>
+		<Version>0.8.0</Version>
 		<Description>AI memory layer for .NET — LLM-powered fact extraction, intelligent consolidation, vector search, and staleness scoring. Works in Blazor WASM (browser) or server-side ASP.NET Core.</Description>
 		<PackageTags>blazor;ai;memory;llm;vector;embeddings;wasm;dotnet;openai;anthropic</PackageTags>
 	</PropertyGroup>
 	<ItemGroup>
-		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
 		<None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" Condition="Exists('..\..\assets\icon.png')" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />

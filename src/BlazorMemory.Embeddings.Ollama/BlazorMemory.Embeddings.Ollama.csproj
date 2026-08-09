@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <PackageId>BlazorMemory.Embeddings.Ollama</PackageId>
+    <Version>0.8.0</Version>
+    <Description>Ollama embeddings provider for BlazorMemory. Run local embeddings with nomic-embed-text or any Ollama-hosted model — no API key required.</Description>
+    <PackageTags>blazor;ai;memory;ollama;embeddings;local;vector</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+</Project>

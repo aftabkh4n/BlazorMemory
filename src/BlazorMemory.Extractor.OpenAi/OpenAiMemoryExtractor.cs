@@ -69,6 +69,16 @@ public sealed class OpenAiMemoryExtractor : IMemoryExtractor
         return ParseDecision(raw);
     }
 
+    public async Task<string> SummarizeAsync(
+        IReadOnlyList<MemoryEntry> memories, CancellationToken ct = default)
+    {
+        var facts = string.Join("\n", memories.Select(m => $"- {m.Content}"));
+        var prompt = $"Summarize these facts about a user into a single concise paragraph. Start with 'User background:'. Facts:\n{facts}";
+        var messages = new List<ChatMessage> { new UserChatMessage(prompt) };
+        var response = await CreateClient().CompleteChatAsync(messages, cancellationToken: ct);
+        return response.Value.Content[0].Text.Trim();
+    }
+
     private static ConsolidationDecision ParseDecision(string json)
     {
         try

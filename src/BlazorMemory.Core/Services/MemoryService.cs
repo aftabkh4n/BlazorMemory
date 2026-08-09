@@ -280,6 +280,42 @@ public sealed class MemoryService : IMemoryService
         }
     }
 
+    public async Task SummarizeOldMemoriesAsync(
+        string userId,
+        int maxMemories = 50,
+        int keepRecent = 20,
+        string? @namespace = null,
+        CancellationToken ct = default)
+    {
+        var all = await _store.ListAsync(userId, @namespace, ct);
+        if (all.Count <= maxMemories)
+            return;
+
+        var toSummarize = all
+            .OrderBy(m => m.LearnedAt)
+            .Take(all.Count - keepRecent)
+            .ToList();
+
+        if (toSummarize.Count == 0)
+            return;
+
+        var summaryText = await _engine.SummarizeAsync(toSummarize, ct);
+
+        foreach (var m in toSummarize)
+            await _store.DeleteAsync(m.Id, ct);
+
+        var embedding = await _embeddings.EmbedAsync(summaryText, ct);
+        await _store.AddAsync(new MemoryEntry
+        {
+            Id        = Guid.NewGuid().ToString("N"),
+            UserId    = userId,
+            Content   = $"[Summary] {summaryText}",
+            Embedding = embedding,
+            LearnedAt = DateTimeOffset.UtcNow,
+            Namespace = @namespace,
+        }, ct);
+    }
+
     public async Task<string> ChatWithMemoryAsync(
         string userMessage,
         string userId,
@@ -307,6 +343,15 @@ public sealed class MemoryService : IMemoryService
 
         return reply;
     }
+
+    public Task MarkVerbatimImportantAsync(string memoryId, CancellationToken ct = default)
+        => GetVerbatimStore().UpdateImportanceAsync(memoryId, ImportanceLevels.Important, ct);
+
+    public Task MarkVerbatimUnimportantAsync(string memoryId, CancellationToken ct = default)
+        => GetVerbatimStore().UpdateImportanceAsync(memoryId, ImportanceLevels.Unimportant, ct);
+
+    public Task ResetVerbatimImportanceAsync(string memoryId, CancellationToken ct = default)
+        => GetVerbatimStore().UpdateImportanceAsync(memoryId, ImportanceLevels.Neutral, ct);
 
     public async Task MarkImportantAsync(string memoryId, CancellationToken ct = default)
         => await SetImportanceInternalAsync(memoryId, ImportanceLevels.Important, ct);

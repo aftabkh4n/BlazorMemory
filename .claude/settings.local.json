@@ -4,7 +4,9 @@
       "Bash(dotnet build *)",
       "Bash(dotnet test *)",
       "Bash(Select-String -Pattern \"\\(error|warning|succeeded|failed\\)\")",
-      "Bash(Select-Object -Last 10)"
+      "Bash(Select-Object -Last 10)",
+      "Bash(dotnet package *)",
+      "Bash(dotnet sln *)"
     ]
   }
 }
