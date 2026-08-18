@@ -6,7 +6,8 @@
       "Bash(Select-String -Pattern \"\\(error|warning|succeeded|failed\\)\")",
       "Bash(Select-Object -Last 10)",
       "Bash(dotnet package *)",
-      "Bash(dotnet sln *)"
+      "Bash(dotnet sln *)",
+      "Bash(git add *)"
     ]
   }
 }

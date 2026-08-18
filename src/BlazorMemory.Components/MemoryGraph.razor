@@ -1,0 +1,223 @@
+@using BlazorMemory.Core.Abstractions
+@using BlazorMemory.Core.Engine
+@using BlazorMemory.Core.Models
+
+@inject IMemoryService MemoryService
+@inject IJSRuntime JS
+
+@implements IAsyncDisposable
+
+@if (_loading)
+{
+    <div class="bm-graph-loading">
+        <div class="bm-graph-spinner"></div>
+        <span>Loading graph…</span>
+    </div>
+}
+else if (_nodes.Count == 0)
+{
+    <div class="bm-graph-empty">
+        <div class="bm-graph-empty-icon">◇</div>
+        <p>No memories yet.</p>
+    </div>
+}
+else
+{
+    <div class="bm-graph-wrap" style="height:@Height">
+
+        <svg id="@_svgId" viewBox="0 0 800 500" width="100%" height="100%"
+             style="display:block; background:#0d1117; border-radius:8px">
+
+            @foreach (var edge in _edges)
+            {
+                <line @key="@($"{edge.SourceId}-{edge.TargetId}")"
+                      id="edge-@edge.SourceId-@edge.TargetId"
+                      x1="@((int)_nodeById[edge.SourceId].X)"
+                      y1="@((int)_nodeById[edge.SourceId].Y)"
+                      x2="@((int)_nodeById[edge.TargetId].X)"
+                      y2="@((int)_nodeById[edge.TargetId].Y)"
+                      stroke="rgba(255,255,255,0.2)"
+                      stroke-width="@edge.Width.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)" />
+            }
+
+            @foreach (var node in _nodes)
+            {
+                <g @key="node.Id"
+                   id="node-@node.Id"
+                   transform="translate(@((int)node.X),@((int)node.Y))"
+                   style="cursor:pointer">
+                    <circle r="@((int)node.Radius)" fill="@node.Color" opacity="0.88" />
+                    <text font-size="9" fill="white" text-anchor="middle" dy="3"
+                          style="pointer-events:none; user-select:none; font-family:monospace">
+                        @node.Label
+                    </text>
+                </g>
+            }
+
+        </svg>
+
+        @if (_tooltip is not null)
+        {
+            <div class="bm-graph-tooltip">
+                <button class="bm-graph-tooltip__close" @onclick="DismissTooltip">✕</button>
+                <p>@_tooltip</p>
+            </div>
+        }
+
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string UserId { get; set; } = string.Empty;
+    [Parameter] public string? Namespace { get; set; }
+    [Parameter] public float SimilarityThreshold { get; set; } = 0.7f;
+    [Parameter] public int MaxNodes { get; set; } = 30;
+    [Parameter] public string Height { get; set; } = "400px";
+
+    private bool _loading = true;
+    private bool _dataReady;
+    private bool _jsInitialized;
+
+    private List<GraphNode> _nodes = [];
+    private List<GraphEdge> _edges = [];
+    private Dictionary<string, GraphNode> _nodeById = [];
+    private List<MemoryEntry> _rawMemories = [];
+
+    private string? _tooltip;
+    private readonly string _svgId = $"mg-{Guid.NewGuid():N}";
+    private DotNetObjectReference<MemoryGraph>? _dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await LoadAsync();
+        else if (_dataReady && !_jsInitialized && _nodes.Count > 0)
+            await InitJsAsync();
+    }
+
+    public async Task RefreshAsync()
+    {
+        _jsInitialized = false;
+        _dataReady = false;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _dataReady = false;
+        StateHasChanged();
+
+        var memories = await MemoryService.ListAsync(UserId, Namespace);
+        _rawMemories = memories.Take(MaxNodes).ToList();
+        BuildGraph(_rawMemories);
+
+        _loading = false;
+        _dataReady = true;
+        StateHasChanged();
+        // OnAfterRenderAsync(false) fires after the re-render, at which point the SVG
+        // is in the DOM and InitJsAsync can safely reference its elements.
+    }
+
+    private async Task InitJsAsync()
+    {
+        _jsInitialized = true;
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+
+        var nodesData = _nodes.Select(n => new
+        {
+            id     = n.Id,
+            label  = n.Label,
+            radius = (int)n.Radius,
+            color  = n.Color,
+            x      = (int)n.X,
+            y      = (int)n.Y
+        });
+
+        var edgesData = _edges.Select(e => new
+        {
+            sourceId = e.SourceId,
+            targetId = e.TargetId,
+            width    = Math.Round(e.Width, 1)
+        });
+
+        await JS.InvokeVoidAsync("MemoryGraph.init", _dotNetRef, _svgId, nodesData, edgesData);
+    }
+
+    private void BuildGraph(List<MemoryEntry> memories)
+    {
+        _nodes.Clear();
+        _edges.Clear();
+        _nodeById.Clear();
+
+        if (memories.Count == 0) return;
+
+        const double cx = 400, cy = 250, rx = 280, ry = 190;
+
+        for (int i = 0; i < memories.Count; i++)
+        {
+            var m     = memories[i];
+            var angle = 2 * Math.PI * i / memories.Count - Math.PI / 2;
+            var label = m.Content.Length > 30 ? m.Content[..30] + "…" : m.Content;
+            var node  = new GraphNode(
+                Id:     m.Id,
+                Label:  label,
+                Radius: NodeRadius(m.ImportanceScore),
+                Color:  NodeColor(m.ImportanceScore),
+                X:      cx + rx * Math.Cos(angle),
+                Y:      cy + ry * Math.Sin(angle));
+
+            _nodes.Add(node);
+            _nodeById[node.Id] = node;
+        }
+
+        for (int i = 0; i < memories.Count; i++)
+        {
+            for (int j = i + 1; j < memories.Count; j++)
+            {
+                var a = memories[i];
+                var b = memories[j];
+                if (a.Embedding.Length == 0 || a.Embedding.Length != b.Embedding.Length)
+                    continue;
+
+                var sim = VectorMath.CosineSimilarity(a.Embedding, b.Embedding);
+                if (sim < SimilarityThreshold) continue;
+
+                var range = 1f - SimilarityThreshold;
+                var width = range > 0 ? 1f + (sim - SimilarityThreshold) / range * 3f : 2f;
+                _edges.Add(new GraphEdge(a.Id, b.Id, Math.Max(1f, width)));
+            }
+        }
+    }
+
+    [JSInvokable]
+    public void OnNodeClicked(string nodeId)
+    {
+        _tooltip = _rawMemories.FirstOrDefault(m => m.Id == nodeId)?.Content;
+        StateHasChanged();
+    }
+
+    private void DismissTooltip() => _tooltip = null;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsInitialized)
+        {
+            try { await JS.InvokeVoidAsync("MemoryGraph.destroy", _svgId); }
+            catch { /* JS context may be gone on hot-reload or navigation */ }
+        }
+        _dotNetRef?.Dispose();
+    }
+
+    private static float NodeRadius(float score) => score switch { > 1f => 20f, < 1f => 12f, _ => 16f };
+
+    private static string NodeColor(float score) => score switch
+    {
+        > 1f => "#4caf50",
+        < 1f => "#f44336",
+        _    => "#2196f3"
+    };
+
+    private sealed record GraphNode(string Id, string Label, float Radius, string Color, double X, double Y);
+    private sealed record GraphEdge(string SourceId, string TargetId, float Width);
+}

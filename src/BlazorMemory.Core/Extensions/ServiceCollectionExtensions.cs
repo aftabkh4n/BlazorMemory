@@ -47,6 +47,16 @@ public sealed class BlazorMemoryBuilder
         Services.AddScoped<MemoryEnabledChat>();
         return this;
     }
+
+    /// <summary>
+    /// Registers <see cref="IAgentMemoryServiceFactory"/> so multiple AI agents can share
+    /// the same memory store, each writing under their own namespace.
+    /// </summary>
+    public BlazorMemoryBuilder UseMultiAgentMemory()
+    {
+        Services.AddScoped<IAgentMemoryServiceFactory, AgentMemoryServiceFactory>();
+        return this;
+    }
 }
 
 /// <summary>
