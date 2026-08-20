@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <PackageId>BlazorMemory.Storage.Pgvector</PackageId>
-    <Version>0.9.0</Version>
+    <Version>1.0.0</Version>
     <Description>PostgreSQL pgvector storage adapter for BlazorMemory. Native vector similarity search using the pgvector extension. Faster and more scalable than the EF Core adapter for large datasets.</Description>
     <PackageTags>blazor;ai;memory;postgresql;pgvector;vector-search</PackageTags>
   </PropertyGroup>

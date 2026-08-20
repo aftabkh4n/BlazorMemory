@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <PackageId>BlazorMemory.SemanticKernel</PackageId>
-    <Version>0.9.0</Version>
+    <Version>1.0.0</Version>
     <Description>Semantic Kernel IMemoryStore adapter for BlazorMemory. Plug BlazorMemory into any Semantic Kernel pipeline as a first-class memory backend.</Description>
     <PackageTags>blazor;ai;memory;semantic-kernel;vector-search</PackageTags>
     <NoWarn>$(NoWarn);SKEXP0001</NoWarn>
