@@ -7,97 +7,120 @@ BlazorMemory/
 │
 ├── src/
 │   │
-│   ├── BlazorMemory.Core/                          ← Core package (NuGet: BlazorMemory)
+│   ├── BlazorMemory.Core/                              ← NuGet: BlazorMemory
 │   │   ├── Abstractions/
-│   │   │   └── Interfaces.cs                       ← IMemoryService, IMemoryStore, IEmbeddingsProvider, IMemoryExtractor
+│   │   │   └── Interfaces.cs                           ← IMemoryService, IMemoryStore, IEmbeddingsProvider, IMemoryExtractor, IAgentMemoryServiceFactory
 │   │   ├── Models/
-│   │   │   └── MemoryEntry.cs                      ← MemoryEntry, QueryOptions, ConsolidationDecision
+│   │   │   └── MemoryEntry.cs                          ← MemoryEntry, QueryOptions, ConsolidationDecision
 │   │   ├── Services/
-│   │   │   └── MemoryService.cs                    ← Default IMemoryService implementation
+│   │   │   ├── MemoryService.cs                        ← Default IMemoryService implementation
+│   │   │   ├── AgentMemoryService.cs                   ← Per-agent scoped memory operations
+│   │   │   └── AgentMemoryServiceFactory.cs            ← Creates AgentMemoryService instances
 │   │   ├── Engine/
-│   │   │   ├── ExtractionEngine.cs                 ← Orchestrates extract → consolidate flow
-│   │   │   ├── ConsolidationEngine.cs              ← Handles ADD/UPDATE/DELETE/NONE logic
-│   │   │   └── StalenessCalculator.cs              ← Temporal staleness scoring
+│   │   │   ├── ExtractionEngine.cs                     ← Orchestrates extract and consolidate flow
+│   │   │   ├── ConsolidationEngine.cs                  ← ADD/UPDATE/DELETE/NONE logic
+│   │   │   └── StalenessCalculator.cs                  ← Temporal staleness scoring
 │   │   ├── Extensions/
-│   │   │   └── ServiceCollectionExtensions.cs      ← AddBlazorMemory() DI registration
+│   │   │   └── ServiceCollectionExtensions.cs          ← AddBlazorMemory() DI registration
 │   │   └── BlazorMemory.Core.csproj
 │   │
-│   ├── BlazorMemory.Storage.IndexedDb/             ← NuGet: BlazorMemory.Storage.IndexedDb
-│   │   ├── IndexedDbMemoryStore.cs                 ← IMemoryStore via JS Interop
+│   ├── BlazorMemory.Components/                        ← NuGet: BlazorMemory.Components
+│   │   ├── MemoryPanel.razor                           ← Memory list with delete, export, import, feedback
+│   │   ├── MemoryGraph.razor                           ← Force-directed memory relationship graph
+│   │   ├── MemoryModeToggle.razor                      ← Switch between extract and verbatim modes
+│   │   └── BlazorMemory.Components.csproj
+│   │
+│   ├── BlazorMemory.Storage.IndexedDb/                 ← NuGet: BlazorMemory.Storage.IndexedDb
+│   │   ├── IndexedDbMemoryStore.cs                     ← IMemoryStore via JS Interop
 │   │   ├── Interop/
-│   │   │   ├── IndexedDbInterop.cs                 ← C# JS Interop wrapper
-│   │   │   └── blazorMemory.js                     ← JS-side IndexedDB operations
+│   │   │   ├── IndexedDbInterop.cs                     ← C# JS interop wrapper
+│   │   │   └── blazorMemory.js                         ← IndexedDB operations in JS
 │   │   └── BlazorMemory.Storage.IndexedDb.csproj
 │   │
-│   ├── BlazorMemory.Storage.EfCore/                ← NuGet: BlazorMemory.Storage.EfCore
-│   │   ├── EfCoreMemoryStore.cs                    ← IMemoryStore via EF Core
-│   │   ├── MemoryDbContext.cs                      ← DbContext with vector column support
-│   │   ├── Entities/
-│   │   │   └── MemoryEntryEntity.cs
+│   ├── BlazorMemory.Storage.EfCore/                    ← NuGet: BlazorMemory.Storage.EfCore
+│   │   ├── EfCoreMemoryStore.cs                        ← IMemoryStore via EF Core
+│   │   ├── MemoryDbContext.cs
 │   │   └── BlazorMemory.Storage.EfCore.csproj
 │   │
-│   ├── BlazorMemory.Storage.InMemory/              ← NuGet: BlazorMemory.Storage.InMemory (testing)
-│   │   └── InMemoryMemoryStore.cs
+│   ├── BlazorMemory.Storage.Pgvector/                  ← NuGet: BlazorMemory.Storage.Pgvector
+│   │   ├── PgvectorMemoryStore.cs                      ← IMemoryStore with native pgvector similarity
+│   │   ├── PgvectorDbContext.cs                        ← Base DbContext with pgvector column
+│   │   └── BlazorMemory.Storage.Pgvector.csproj
 │   │
-│   ├── BlazorMemory.Embeddings.OpenAi/             ← NuGet: BlazorMemory.Embeddings.OpenAi
+│   ├── BlazorMemory.Storage.InMemory/                  ← NuGet: BlazorMemory.Storage.InMemory
+│   │   └── InMemoryMemoryStore.cs                      ← In-process store for tests
+│   │
+│   ├── BlazorMemory.Embeddings.OpenAi/                 ← NuGet: BlazorMemory.Embeddings.OpenAi
 │   │   ├── OpenAiEmbeddingsProvider.cs
 │   │   └── BlazorMemory.Embeddings.OpenAi.csproj
 │   │
-│   ├── BlazorMemory.Embeddings.AzureOpenAi/        ← NuGet: BlazorMemory.Embeddings.AzureOpenAi
-│   │   └── AzureOpenAiEmbeddingsProvider.cs
+│   ├── BlazorMemory.Embeddings.Ollama/                 ← NuGet: BlazorMemory.Embeddings.Ollama
+│   │   ├── OllamaEmbeddingsProvider.cs                 ← HTTP client against localhost:11434
+│   │   ├── OllamaEmbeddingsOptions.cs
+│   │   ├── ServiceCollectionExtensions.cs
+│   │   └── BlazorMemory.Embeddings.Ollama.csproj
 │   │
-│   ├── BlazorMemory.Embeddings.Local/              ← NuGet: BlazorMemory.Embeddings.Local (offline ONNX)
-│   │   ├── LocalEmbeddingsProvider.cs              ← Uses Microsoft.ML.OnnxRuntime
-│   │   └── BlazorMemory.Embeddings.Local.csproj
+│   ├── BlazorMemory.Embeddings.AzureOpenAi/            ← NuGet: BlazorMemory.Embeddings.AzureOpenAi
+│   │   ├── AzureOpenAiEmbeddingsProvider.cs            ← HTTP client, api-key header, deployment URL
+│   │   ├── AzureOpenAiEmbeddingsOptions.cs
+│   │   ├── ServiceCollectionExtensions.cs
+│   │   └── BlazorMemory.Embeddings.AzureOpenAi.csproj
 │   │
-│   ├── BlazorMemory.Extractor.OpenAi/              ← NuGet: BlazorMemory.Extractor.OpenAi
+│   ├── BlazorMemory.Extractor.OpenAi/                  ← NuGet: BlazorMemory.Extractor.OpenAi
 │   │   ├── OpenAiMemoryExtractor.cs
 │   │   ├── Prompts/
-│   │   │   ├── ExtractionPrompt.cs
-│   │   │   └── ConsolidationPrompt.cs
+│   │   │   └── ExtractionPrompts.cs
 │   │   └── BlazorMemory.Extractor.OpenAi.csproj
 │   │
-│   ├── BlazorMemory.Extractor.AzureOpenAi/
-│   │   └── AzureOpenAiMemoryExtractor.cs
+│   ├── BlazorMemory.Extractor.Anthropic/               ← NuGet: BlazorMemory.Extractor.Anthropic
+│   │   ├── AnthropicMemoryExtractor.cs
+│   │   └── BlazorMemory.Extractor.Anthropic.csproj
 │   │
-│   └── BlazorMemory.Extractor.Anthropic/           ← NuGet: BlazorMemory.Extractor.Anthropic
-│       └── AnthropicMemoryExtractor.cs
+│   ├── BlazorMemory.Extractor.Ollama/                  ← NuGet: BlazorMemory.Extractor.Ollama
+│   │   ├── OllamaMemoryExtractor.cs                    ← HTTP client, ExtractJson robustness, retry
+│   │   ├── OllamaExtractorOptions.cs
+│   │   ├── ServiceCollectionExtensions.cs
+│   │   └── BlazorMemory.Extractor.Ollama.csproj
+│   │
+│   ├── BlazorMemory.Extractor.AzureOpenAi/             ← NuGet: BlazorMemory.Extractor.AzureOpenAi
+│   │   ├── AzureOpenAiMemoryExtractor.cs               ← HTTP client, api-key header, deployment URL
+│   │   ├── AzureOpenAiExtractorOptions.cs
+│   │   ├── ServiceCollectionExtensions.cs
+│   │   └── BlazorMemory.Extractor.AzureOpenAi.csproj
+│   │
+│   └── BlazorMemory.SemanticKernel/                    ← NuGet: BlazorMemory.SemanticKernel
+│       ├── BlazorMemoryMemoryStore.cs                  ← Implements SK IMemoryStore over IMemoryStore
+│       ├── ServiceCollectionExtensions.cs              ← UseSemanticKernelMemoryStore()
+│       └── BlazorMemory.SemanticKernel.csproj
 │
 ├── samples/
 │   │
-│   ├── ChatApp.BlazorWasm/                         ← PRIMARY DEMO: Chatbot with browser memory
-│   │   ├── Components/
-│   │   │   ├── Chat.razor                          ← Main chat UI
-│   │   │   └── MemoryPanel.razor                   ← Live memory inspection panel
-│   │   ├── Program.cs
-│   │   └── ChatApp.BlazorWasm.csproj
-│   │
-│   └── ChatApp.ServerSide/                         ← ASP.NET Core API demo
-│       ├── Controllers/
-│       │   ├── ChatController.cs
-│       │   └── MemoryController.cs
+│   └── ChatApp.BlazorWasm/                             ← Chatbot demo with browser memory
+│       ├── Components/
+│       │   ├── Chat.razor
+│       │   └── MemoryPanel.razor
 │       ├── Program.cs
-│       └── ChatApp.ServerSide.csproj
+│       └── ChatApp.BlazorWasm.csproj
 │
 ├── tests/
 │   ├── BlazorMemory.Core.Tests/
-│   │   ├── ConsolidationEngineTests.cs
-│   │   ├── StalenessCalculatorTests.cs
-│   │   └── MemoryServiceTests.cs
-│   └── BlazorMemory.Storage.InMemory.Tests/
+│   ├── BlazorMemory.Storage.IndexedDb.Tests/
+│   ├── BlazorMemory.Storage.EfCore.Tests/
+│   ├── BlazorMemory.Embeddings.Ollama.Tests/
+│   ├── BlazorMemory.Embeddings.AzureOpenAi.Tests/
+│   ├── BlazorMemory.Extractor.Anthropic.Tests/
+│   ├── BlazorMemory.Extractor.Ollama.Tests/
+│   └── BlazorMemory.Extractor.AzureOpenAi.Tests/
 │
-├── docs/
-│   ├── assets/
-│   │   └── logo.png
-│   ├── quickstart.md
-│   ├── core-concepts.md
-│   ├── temporal-memory.md
-│   └── adapters.md
+├── assets/
+│   ├── demo.gif
+│   └── blazormemory-icon.png
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml                                  ← Build + test on every PR
-│       └── nuget-publish.yml                       ← Publish to NuGet on tag
+│       ├── ci.yml                                      ← Build and test on every PR
+│       └── nuget-publish.yml                           ← Publish to NuGet on tag
 │
-└── README.md
+├── README.md
+└── STRUCTURE.md
 ```

@@ -6,6 +6,13 @@
 # dotenv files
 .env
 
+# Secret config files — never commit real keys
+secrets.json
+appsettings.Development.json
+
+# NuGet package output
+nupkgs/
+
 # User-specific files
 *.rsuser
 *.suo

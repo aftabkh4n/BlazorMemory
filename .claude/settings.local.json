@@ -7,7 +7,20 @@
       "Bash(Select-Object -Last 10)",
       "Bash(dotnet package *)",
       "Bash(dotnet sln *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(xargs sed -i 's/<Version>0\\\\.8\\\\.0<\\\\/Version>/<Version>0.9.0<\\\\/Version>/g')",
+      "Bash(dotnet pack *)",
+      "Bash(grep -c \"^| \\\\`BlazorMemory\" README.md)",
+      "Bash(grep -iE \"sk-[a-zA-Z0-9]{20,}\")",
+      "Bash(grep -iE \"sk-ant-|ghp_|gho_|ghs_|github_pat_|oy2[a-z0-9]{30,}\")",
+      "Bash(grep -rn \"ApiKey\\\\s*=\\\\s*['\\\\\"][a-zA-Z0-9\\\\-_]{20,}['\\\\\"]\" --include=\"*.cs\" --include=\"*.json\" .)",
+      "Bash(xargs grep -ln \".\")",
+      "Bash(grep -iE \"sk-[a-zA-Z0-9]{20,}|ghp_|github_pat_|oy2[a-z0-9]{30,}|password\\\\s*=\\\\s*['\\\\\"][^'\\\\\"]{6,}\")",
+      "Bash(grep -E \"^\\\\+.*ApiKey\\\\s*=\\\\s*\\\\\"[a-zA-Z0-9\\\\-_]{20,}\\\\\"\")",
+      "Bash(grep -E \"^\\\\+.*['\\\\\"][a-z]{2}-[a-zA-Z0-9]{20,}['\\\\\"]\")",
+      "Bash(grep -iE \"\\\\.env$|secrets\\\\.json$|appsettings\\\\.Development\")"
     ]
   }
 }

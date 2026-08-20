@@ -1,15 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <PackageId>BlazorMemory.Extractor.Ollama</PackageId>
+    <PackageId>BlazorMemory.Embeddings.AzureOpenAi</PackageId>
     <Version>0.9.0</Version>
-    <Description>Ollama-powered fact extractor and memory consolidator for BlazorMemory. Run local LLMs like llama3.2 or mistral — no API key required.</Description>
-    <PackageTags>blazor;ai;memory;ollama;llama;extraction;llm;local</PackageTags>
+    <Description>Azure OpenAI embeddings provider for BlazorMemory. Connects to your Azure OpenAI resource using deployment names.</Description>
+    <PackageTags>blazor;ai;memory;azure;openai;embeddings;vectors</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
   </ItemGroup>
 </Project>
