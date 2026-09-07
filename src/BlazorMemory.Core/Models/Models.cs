@@ -55,6 +55,13 @@ public sealed record QueryOptions
     /// Default true.
     /// </summary>
     public bool ApplyImportanceScore { get; init; } = true;
+
+    /// <summary>
+    /// Multiplier applied to Limit when calling the store, so age filtering and
+    /// importance re-ranking have a larger candidate pool to work with.
+    /// The final result set is still capped at Limit.
+    /// </summary>
+    public int CandidateMultiplier { get; init; } = 4;
 }
 
 public sealed record ConsolidationDecision

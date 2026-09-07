@@ -82,27 +82,29 @@ internal sealed class IndexedDbInterop : IAsyncDisposable
 
     private static MemoryEntryDto ToDto(MemoryEntry e) => new()
     {
-        Id        = e.Id,
-        UserId    = e.UserId,
-        Content   = e.Content,
-        Embedding = e.Embedding,
-        LearnedAt = e.LearnedAt.ToString("O"),
-        Namespace = e.Namespace,
-        UpdatedAt = e.UpdatedAt?.ToString("O"),
-        Metadata  = e.Metadata
+        Id              = e.Id,
+        UserId          = e.UserId,
+        Content         = e.Content,
+        Embedding       = e.Embedding,
+        LearnedAt       = e.LearnedAt.ToString("O"),
+        Namespace       = e.Namespace,
+        UpdatedAt       = e.UpdatedAt?.ToString("O"),
+        Metadata        = e.Metadata,
+        ImportanceScore = e.ImportanceScore
     };
 
     private static MemoryEntry FromDto(MemoryEntryDto d) => new()
     {
-        Id             = d.Id,
-        UserId         = d.UserId,
-        Content        = d.Content,
-        Embedding      = d.Embedding,
-        LearnedAt      = DateTimeOffset.Parse(d.LearnedAt),
-        Namespace      = d.Namespace,
-        UpdatedAt      = d.UpdatedAt is null ? null : DateTimeOffset.Parse(d.UpdatedAt),
-        Metadata       = d.Metadata,
-        RelevanceScore = d.RelevanceScore
+        Id              = d.Id,
+        UserId          = d.UserId,
+        Content         = d.Content,
+        Embedding       = d.Embedding,
+        LearnedAt       = DateTimeOffset.Parse(d.LearnedAt),
+        Namespace       = d.Namespace,
+        UpdatedAt       = d.UpdatedAt is null ? null : DateTimeOffset.Parse(d.UpdatedAt),
+        Metadata        = d.Metadata,
+        ImportanceScore = d.ImportanceScore,
+        RelevanceScore  = d.RelevanceScore
     };
 
     // ── Disposal ──────────────────────────────────────────────────────────────

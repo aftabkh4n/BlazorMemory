@@ -86,6 +86,13 @@ public sealed class ExtractionEngine
                 break;
 
             case ConsolidationAction.Update when decision.TargetMemoryId is not null:
+                if (!similar.Any(m => m.Id == decision.TargetMemoryId))
+                {
+                    _logger.LogWarning(
+                        "Consolidation UPDATE target {TargetId} is not in the candidate set; treating as None.",
+                        decision.TargetMemoryId);
+                    break;
+                }
                 var existing = await _store.GetAsync(decision.TargetMemoryId, ct);
                 if (existing is null) break;
 
@@ -100,6 +107,13 @@ public sealed class ExtractionEngine
                 break;
 
             case ConsolidationAction.Delete when decision.TargetMemoryId is not null:
+                if (!similar.Any(m => m.Id == decision.TargetMemoryId))
+                {
+                    _logger.LogWarning(
+                        "Consolidation DELETE target {TargetId} is not in the candidate set; treating as None.",
+                        decision.TargetMemoryId);
+                    break;
+                }
                 await _store.DeleteAsync(decision.TargetMemoryId, ct);
                 break;
 

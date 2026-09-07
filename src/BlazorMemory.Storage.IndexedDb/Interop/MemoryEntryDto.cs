@@ -36,6 +36,9 @@ internal sealed class MemoryEntryDto
     [JsonPropertyName("metadata")]
     public Dictionary<string, string> Metadata { get; set; } = [];
 
+    [JsonPropertyName("importanceScore")]
+    public float ImportanceScore { get; set; } = 1.0f;
+
     /// <summary>
     /// Relevance score attached by the JS searchSimilar() function.
     /// Null when not from a search result.

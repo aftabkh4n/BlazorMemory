@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BlazorMemory.Storage.EfCore.Entities;
 
@@ -14,7 +13,8 @@ public sealed class MemoryEntryEntity
     /// <summary>Optional namespace for segmenting memories.</summary>
     public string? Namespace { get; set; }
 
-    public DateTimeOffset? UpdatedAt    { get; set; }
+    public DateTimeOffset? UpdatedAt     { get; set; }
     public required string EmbeddingJson { get; set; }
     public string?         MetadataJson  { get; set; }
+    public float           ImportanceScore { get; set; } = 1.0f;
 }

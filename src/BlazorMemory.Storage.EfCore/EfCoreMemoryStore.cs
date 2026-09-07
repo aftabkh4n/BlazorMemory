@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using BlazorMemory.Core.Abstractions;
 using BlazorMemory.Core.Engine;
@@ -6,6 +7,8 @@ using BlazorMemory.Core.Models;
 using BlazorMemory.Storage.EfCore.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace BlazorMemory.Storage.EfCore;
 
@@ -13,8 +16,13 @@ public sealed class EfCoreMemoryStore<TContext> : IMemoryStore
     where TContext : MemoryDbContext
 {
     private readonly TContext _db;
+    private readonly ILogger<EfCoreMemoryStore<TContext>> _logger;
 
-    public EfCoreMemoryStore(TContext db) => _db = db;
+    public EfCoreMemoryStore(TContext db, ILogger<EfCoreMemoryStore<TContext>>? logger = null)
+    {
+        _db     = db;
+        _logger = logger ?? NullLogger<EfCoreMemoryStore<TContext>>.Instance;
+    }
 
     public async Task<string> AddAsync(MemoryEntry entry, CancellationToken ct = default)
     {
@@ -28,11 +36,12 @@ public sealed class EfCoreMemoryStore<TContext> : IMemoryStore
         var entity = await _db.Set<MemoryEntryEntity>().FindAsync([entry.Id], ct);
         if (entity is null) return;
 
-        entity.Content       = entry.Content;
-        entity.EmbeddingJson = SerializeEmbedding(entry.Embedding);
-        entity.MetadataJson  = SerializeMetadata(entry.Metadata);
-        entity.Namespace     = entry.Namespace;
-        entity.UpdatedAt     = entry.UpdatedAt;
+        entity.Content         = entry.Content;
+        entity.EmbeddingJson   = SerializeEmbedding(entry.Embedding);
+        entity.MetadataJson    = SerializeMetadata(entry.Metadata);
+        entity.Namespace       = entry.Namespace;
+        entity.UpdatedAt       = entry.UpdatedAt;
+        entity.ImportanceScore = entry.ImportanceScore;
         await _db.SaveChangesAsync(ct);
     }
 
@@ -57,7 +66,7 @@ public sealed class EfCoreMemoryStore<TContext> : IMemoryStore
     {
         var query = _db.Set<MemoryEntryEntity>().Where(e => e.UserId == userId);
         if (@namespace is not null) query = query.Where(e => e.Namespace == @namespace);
-        return (await query.ToListAsync(ct)).Select(e => ToDomain(e)).ToList();
+        return (await query.ToListAsync(ct)).Select(ToDomain).ToList();
     }
 
     public async Task<IReadOnlyList<MemoryEntry>> SearchSimilarAsync(
@@ -72,8 +81,8 @@ public sealed class EfCoreMemoryStore<TContext> : IMemoryStore
         if (@namespace is not null) query = query.Where(e => e.Namespace == @namespace);
 
         return (await query.ToListAsync(ct))
-            .Select(e => ToDomain(e).WithRelevanceScore(
-                VectorMath.CosineSimilarity(queryEmbedding, DeserializeEmbedding(e.EmbeddingJson))))
+            .Select(ToDomain)
+            .Select(m => m.WithRelevanceScore(VectorMath.CosineSimilarity(queryEmbedding, m.Embedding)))
             .Where(m => m.RelevanceScore >= threshold)
             .OrderByDescending(m => m.RelevanceScore)
             .Take(limit)
@@ -91,37 +100,56 @@ public sealed class EfCoreMemoryStore<TContext> : IMemoryStore
         await _db.SaveChangesAsync(ct);
     }
 
-    // ── Mapping ───────────────────────────────────────────────────────────────
+    // -- Mapping -------------------------------------------------------------
 
     private static MemoryEntryEntity ToEntity(MemoryEntry m) => new()
     {
-        Id            = m.Id,
-        UserId        = m.UserId,
-        Content       = m.Content,
-        EmbeddingJson = SerializeEmbedding(m.Embedding),
-        MetadataJson  = SerializeMetadata(m.Metadata),
-        Namespace     = m.Namespace,
-        LearnedAt     = m.LearnedAt,
-        UpdatedAt     = m.UpdatedAt
+        Id              = m.Id,
+        UserId          = m.UserId,
+        Content         = m.Content,
+        EmbeddingJson   = SerializeEmbedding(m.Embedding),
+        MetadataJson    = SerializeMetadata(m.Metadata),
+        Namespace       = m.Namespace,
+        LearnedAt       = m.LearnedAt,
+        UpdatedAt       = m.UpdatedAt,
+        ImportanceScore = m.ImportanceScore
     };
 
-    private static MemoryEntry ToDomain(MemoryEntryEntity e) => new()
+    private MemoryEntry ToDomain(MemoryEntryEntity e) => new()
     {
-        Id        = e.Id,
-        UserId    = e.UserId,
-        Content   = e.Content,
-        Embedding = DeserializeEmbedding(e.EmbeddingJson),
-        Metadata  = DeserializeMetadata(e.MetadataJson),
-        Namespace = e.Namespace,
-        LearnedAt = e.LearnedAt,
-        UpdatedAt = e.UpdatedAt
+        Id              = e.Id,
+        UserId          = e.UserId,
+        Content         = e.Content,
+        Embedding       = DeserializeEmbedding(e.EmbeddingJson, e.Id),
+        Metadata        = DeserializeMetadata(e.MetadataJson),
+        Namespace       = e.Namespace,
+        LearnedAt       = e.LearnedAt,
+        UpdatedAt       = e.UpdatedAt,
+        ImportanceScore = e.ImportanceScore
     };
 
+    // Semicolon separator avoids ambiguity with decimal-comma locales.
     private static string SerializeEmbedding(float[] e)
-        => string.Join(",", e);
+        => string.Join(";", e.Select(v => v.ToString(CultureInfo.InvariantCulture)));
 
-    private static float[] DeserializeEmbedding(string raw)
-        => raw.Split(',').Select(float.Parse).ToArray();
+    // Supports the new semicolon format and the legacy comma format.
+    // Legacy rows written under a decimal-comma culture are unrecoverable; if
+    // parsing fails, an empty embedding is returned and the incident is logged.
+    private float[] DeserializeEmbedding(string raw, string entryId)
+    {
+        try
+        {
+            return raw.Contains(';')
+                ? raw.Split(';').Select(s => float.Parse(s, CultureInfo.InvariantCulture)).ToArray()
+                : raw.Split(',').Select(s => float.Parse(s, CultureInfo.InvariantCulture)).ToArray();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Failed to deserialize embedding for memory {Id}; returning empty embedding.", entryId);
+            return [];
+        }
+    }
 
     private static string? SerializeMetadata(Dictionary<string, string>? m)
         => m is null || m.Count == 0 ? null : JsonSerializer.Serialize(m);

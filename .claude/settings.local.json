@@ -20,7 +20,9 @@
       "Bash(grep -iE \"sk-[a-zA-Z0-9]{20,}|ghp_|github_pat_|oy2[a-z0-9]{30,}|password\\\\s*=\\\\s*['\\\\\"][^'\\\\\"]{6,}\")",
       "Bash(grep -E \"^\\\\+.*ApiKey\\\\s*=\\\\s*\\\\\"[a-zA-Z0-9\\\\-_]{20,}\\\\\"\")",
       "Bash(grep -E \"^\\\\+.*['\\\\\"][a-z]{2}-[a-zA-Z0-9]{20,}['\\\\\"]\")",
-      "Bash(grep -iE \"\\\\.env$|secrets\\\\.json$|appsettings\\\\.Development\")"
+      "Bash(grep -iE \"\\\\.env$|secrets\\\\.json$|appsettings\\\\.Development\")",
+      "Bash(awk -F'Passed: ' '{print $2}')",
+      "Bash(awk -F',' '{sum += $1} END {print \"Total passing: \" sum}')"
     ]
   }
 }

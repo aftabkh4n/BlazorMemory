@@ -51,9 +51,11 @@ public sealed class MemoryService : IMemoryService
         options ??= new QueryOptions();
         var embedding = await _embeddings.EmbedAsync(context, ct);
 
-        var results = await _store.SearchSimilarAsync(
+        // Fetch a wider candidate pool so post-store filters (age, importance re-ranking)
+        // can surface entries that a hard store limit would have buried.
+        IReadOnlyList<MemoryEntry> results = await _store.SearchSimilarAsync(
             embedding, userId,
-            options.Limit,
+            options.Limit * options.CandidateMultiplier,
             options.Threshold,
             options.Namespace,
             ct);
@@ -80,7 +82,7 @@ public sealed class MemoryService : IMemoryService
                 .ToList();
         }
 
-        return results;
+        return results.Take(options.Limit).ToList();
     }
 
     public Task<IReadOnlyList<MemoryEntry>> ListAsync(
@@ -301,9 +303,8 @@ public sealed class MemoryService : IMemoryService
 
         var summaryText = await _engine.SummarizeAsync(toSummarize, ct);
 
-        foreach (var m in toSummarize)
-            await _store.DeleteAsync(m.Id, ct);
-
+        // Embed and store the summary BEFORE deleting originals so the user's
+        // data is never in a state where originals are gone with no summary.
         var embedding = await _embeddings.EmbedAsync(summaryText, ct);
         await _store.AddAsync(new MemoryEntry
         {
@@ -314,6 +315,19 @@ public sealed class MemoryService : IMemoryService
             LearnedAt = DateTimeOffset.UtcNow,
             Namespace = @namespace,
         }, ct);
+
+        foreach (var m in toSummarize)
+        {
+            try
+            {
+                await _store.DeleteAsync(m.Id, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to delete summarized memory {Id}; it may remain as a duplicate.", m.Id);
+            }
+        }
     }
 
     public async Task<string> ChatWithMemoryAsync(
