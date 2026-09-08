@@ -62,6 +62,28 @@ public class AzureOpenAiEmbeddingsProviderTests
 
         provider.Dimensions.Should().Be(3072);
     }
+
+    [Fact]
+    public void ModelIdentifier_ReturnsAzurePrefix_AndDeploymentName()
+    {
+        var provider = Build(
+            "{}",
+            out _,
+            new AzureOpenAiEmbeddingsOptions { DeploymentName = "text-embedding-3-small" });
+
+        provider.ModelIdentifier.Should().Be("azure/text-embedding-3-small");
+    }
+
+    [Fact]
+    public void ModelIdentifier_ReflectsCustomDeployment()
+    {
+        var provider = Build(
+            "{}",
+            out _,
+            new AzureOpenAiEmbeddingsOptions { DeploymentName = "my-ada-002" });
+
+        provider.ModelIdentifier.Should().Be("azure/my-ada-002");
+    }
 }
 
 public sealed class CapturingHandler : HttpMessageHandler

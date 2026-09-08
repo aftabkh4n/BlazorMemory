@@ -28,6 +28,8 @@ public sealed class OpenAiEmbeddingsProvider : IEmbeddingsProvider
     public int Dimensions =>
         ModelDimensions.TryGetValue(_options.Model, out var d) ? d : 1536;
 
+    public string ModelIdentifier => $"openai/{_options.Model}";
+
     public OpenAiEmbeddingsProvider(IOptions<OpenAiEmbeddingsOptions> options)
     {
         _options = options.Value;

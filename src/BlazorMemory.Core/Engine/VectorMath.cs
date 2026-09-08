@@ -13,7 +13,8 @@ public static class VectorMath
     public static float CosineSimilarity(float[] a, float[] b)
     {
         if (a.Length != b.Length)
-            throw new ArgumentException("Vectors must have the same dimensionality.");
+            throw new ArgumentException(
+                $"Vectors must have the same dimensionality: a has {a.Length} elements, b has {b.Length} elements.");
 
         float dot = 0f, normA = 0f, normB = 0f;
 

@@ -54,6 +54,16 @@ public interface IMemoryService
         CancellationToken ct = default);
 
     /// <summary>
+    /// Re-embeds all memories for a user with the currently configured provider.
+    /// Use after switching embedding models. Returns the number re-embedded.
+    /// </summary>
+    Task<int> ReindexAsync(
+        string userId,
+        string? @namespace = null,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Convenience wrapper: queries relevant memories, injects them into the system prompt,
     /// calls <paramref name="llmCall"/>, extracts new memories, and returns the reply.
     /// </summary>
@@ -85,6 +95,13 @@ public interface IMemoryStore
 public interface IEmbeddingsProvider
 {
     int Dimensions { get; }
+
+    /// <summary>
+    /// Identifies the embedding model, used to detect when stored vectors were
+    /// produced by a different model. Format: "provider/model", e.g. "openai/text-embedding-3-small".
+    /// </summary>
+    string ModelIdentifier => "unknown";
+
     Task<float[]> EmbedAsync(string text, CancellationToken ct = default);
     Task<IReadOnlyList<float[]>> EmbedBatchAsync(IEnumerable<string> texts, CancellationToken ct = default);
 }

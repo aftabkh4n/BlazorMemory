@@ -35,6 +35,7 @@ public sealed class PgvectorMemoryStore<TContext> : IMemoryStore
         entity.Namespace       = entry.Namespace;
         entity.UpdatedAt       = entry.UpdatedAt;
         entity.ImportanceScore = entry.ImportanceScore;
+        entity.EmbeddingModel  = entry.EmbeddingModel;
 
         await _db.SaveChangesAsync(ct);
     }
@@ -107,28 +108,30 @@ public sealed class PgvectorMemoryStore<TContext> : IMemoryStore
 
     private static PgvectorMemoryEntry ToEntity(MemoryEntry m) => new()
     {
-        Id             = m.Id,
-        UserId         = m.UserId,
-        Content        = m.Content,
-        Embedding      = new Vector(m.Embedding),
-        MetadataJson   = SerializeMetadata(m.Metadata),
-        Namespace      = m.Namespace,
-        LearnedAt      = m.LearnedAt,
-        UpdatedAt      = m.UpdatedAt,
-        ImportanceScore = m.ImportanceScore
+        Id              = m.Id,
+        UserId          = m.UserId,
+        Content         = m.Content,
+        Embedding       = new Vector(m.Embedding),
+        MetadataJson    = SerializeMetadata(m.Metadata),
+        Namespace       = m.Namespace,
+        LearnedAt       = m.LearnedAt,
+        UpdatedAt       = m.UpdatedAt,
+        ImportanceScore = m.ImportanceScore,
+        EmbeddingModel  = m.EmbeddingModel
     };
 
     private static MemoryEntry ToDomain(PgvectorMemoryEntry e) => new()
     {
-        Id             = e.Id,
-        UserId         = e.UserId,
-        Content        = e.Content,
-        Embedding      = e.Embedding.ToArray(),
-        Metadata       = DeserializeMetadata(e.MetadataJson),
-        Namespace      = e.Namespace,
-        LearnedAt      = e.LearnedAt,
-        UpdatedAt      = e.UpdatedAt,
-        ImportanceScore = e.ImportanceScore
+        Id              = e.Id,
+        UserId          = e.UserId,
+        Content         = e.Content,
+        Embedding       = e.Embedding.ToArray(),
+        Metadata        = DeserializeMetadata(e.MetadataJson),
+        Namespace       = e.Namespace,
+        LearnedAt       = e.LearnedAt,
+        UpdatedAt       = e.UpdatedAt,
+        ImportanceScore = e.ImportanceScore,
+        EmbeddingModel  = e.EmbeddingModel
     };
 
     private static string? SerializeMetadata(Dictionary<string, string>? m)

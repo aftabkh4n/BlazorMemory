@@ -17,4 +17,5 @@ public sealed class MemoryEntryEntity
     public required string EmbeddingJson { get; set; }
     public string?         MetadataJson  { get; set; }
     public float           ImportanceScore { get; set; } = 1.0f;
+    public string?         EmbeddingModel  { get; set; }
 }

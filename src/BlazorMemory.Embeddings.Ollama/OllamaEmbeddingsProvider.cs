@@ -12,6 +12,8 @@ public sealed class OllamaEmbeddingsProvider : IEmbeddingsProvider
 
     public int Dimensions => _options.Dimensions;
 
+    public string ModelIdentifier => $"ollama/{_options.Model}";
+
     public OllamaEmbeddingsProvider(HttpClient http, IOptions<OllamaEmbeddingsOptions> options)
     {
         _options = options.Value;

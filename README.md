@@ -37,8 +37,10 @@ public class ChatService(IMemoryService memory)
         var memories = await memory.QueryAsync(message, userId,
             new QueryOptions { Limit = 5, Threshold = 0.65f });
 
-        var context = string.Join("\n", memories.Select(m => $"- {m.Content}"));
-        var prompt  = $"You are a helpful assistant.\n\nWhat you know:\n{context}";
+        var context = MemoryContextBuilder.Build(memories);
+        var prompt  = string.IsNullOrEmpty(context)
+            ? "You are a helpful assistant."
+            : $"You are a helpful assistant.\n\n{context}";
 
         var reply = await CallLlmAsync(prompt, message);
 

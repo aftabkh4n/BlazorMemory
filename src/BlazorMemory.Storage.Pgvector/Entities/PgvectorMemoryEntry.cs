@@ -16,4 +16,5 @@ public sealed class PgvectorMemoryEntry
     public DateTimeOffset? UpdatedAt { get; set; }
     public string?  MetadataJson    { get; set; }
     public float    ImportanceScore { get; set; } = 1.0f;
+    public string?  EmbeddingModel  { get; set; }
 }

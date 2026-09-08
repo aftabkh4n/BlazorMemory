@@ -197,6 +197,44 @@ public abstract class MemoryStoreContractTests
         (await store.GetAsync("m2")).Should().NotBeNull();
     }
 
+    // EmbeddingModel must survive a full round-trip through the adapter.
+    [Fact]
+    public async Task AddAsync_ThenGetAsync_PreservesEmbeddingModel()
+    {
+        var store = await CreateStoreAsync();
+        var entry = MakeEntry("m1", "user1", "test") with { EmbeddingModel = "openai/text-embedding-3-small" };
+        await store.AddAsync(entry);
+
+        var result = await store.GetAsync("m1");
+
+        result!.EmbeddingModel.Should().Be("openai/text-embedding-3-small");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PersistsEmbeddingModel()
+    {
+        var store = await CreateStoreAsync();
+        var entry = MakeEntry("m1", "user1", "test") with { EmbeddingModel = "ollama/nomic-embed-text" };
+        await store.AddAsync(entry);
+
+        await store.UpdateAsync(entry with { EmbeddingModel = "openai/text-embedding-3-small", UpdatedAt = DateTimeOffset.UtcNow });
+
+        var result = await store.GetAsync("m1");
+        result!.EmbeddingModel.Should().Be("openai/text-embedding-3-small");
+    }
+
+    [Fact]
+    public async Task AddAsync_ThenGetAsync_AllowsNullEmbeddingModel()
+    {
+        var store = await CreateStoreAsync();
+        var entry = MakeEntry("m1", "user1", "test");
+        await store.AddAsync(entry);
+
+        var result = await store.GetAsync("m1");
+
+        result!.EmbeddingModel.Should().BeNull();
+    }
+
     // Catches FIX 1: EF Core embedding serialization was culture-dependent.
     // Under a decimal-comma culture (e.g. de-DE), comma-joined floats produce
     // unparseable output. The fix uses semicolons and InvariantCulture.

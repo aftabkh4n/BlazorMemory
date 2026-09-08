@@ -46,9 +46,10 @@ public sealed class MemoryEnabledChat
 
     private string BuildSystemPrompt(IReadOnlyList<MemoryEntry> memories)
     {
-        if (memories.Count == 0) return BaseSystemPrompt;
-        var memoryBlock = string.Join("\n", memories.Select(m => $"- {m.Content}"));
-        return $"{BaseSystemPrompt}\n\nWhat you remember about this user:\n{memoryBlock}";
+        var memoryBlock = MemoryContextBuilder.Build(memories, "What you remember about this user:");
+        return memoryBlock.Length == 0
+            ? BaseSystemPrompt
+            : $"{BaseSystemPrompt}\n\n{memoryBlock}";
     }
 
     private async Task ExtractSafeAsync(

@@ -76,12 +76,13 @@ public sealed class ExtractionEngine
             case ConsolidationAction.Add:
                 await _store.AddAsync(new MemoryEntry
                 {
-                    Id        = Guid.NewGuid().ToString("N"),
-                    UserId    = userId,
-                    Namespace = @namespace,
-                    Content   = fact,
-                    Embedding = embedding,
-                    LearnedAt = DateTimeOffset.UtcNow
+                    Id             = Guid.NewGuid().ToString("N"),
+                    UserId         = userId,
+                    Namespace      = @namespace,
+                    Content        = fact,
+                    Embedding      = embedding,
+                    LearnedAt      = DateTimeOffset.UtcNow,
+                    EmbeddingModel = _embeddings.ModelIdentifier
                 }, ct);
                 break;
 
@@ -100,9 +101,10 @@ public sealed class ExtractionEngine
                 var updatedEmbedding = await _embeddings.EmbedAsync(updatedContent, ct);
                 await _store.UpdateAsync(existing with
                 {
-                    Content   = updatedContent,
-                    Embedding = updatedEmbedding,
-                    UpdatedAt = DateTimeOffset.UtcNow
+                    Content        = updatedContent,
+                    Embedding      = updatedEmbedding,
+                    UpdatedAt      = DateTimeOffset.UtcNow,
+                    EmbeddingModel = _embeddings.ModelIdentifier
                 }, ct);
                 break;
 

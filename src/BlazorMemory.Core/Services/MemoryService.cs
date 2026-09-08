@@ -60,6 +60,8 @@ public sealed class MemoryService : IMemoryService
             options.Namespace,
             ct);
 
+        WarnOnModelMismatch(results, userId);
+
         if (options.MaxAgeInDays.HasValue)
         {
             var cutoff = DateTimeOffset.UtcNow.AddDays(-options.MaxAgeInDays.Value);
@@ -102,9 +104,10 @@ public sealed class MemoryService : IMemoryService
         var embedding = await _embeddings.EmbedAsync(content, ct);
         await _store.UpdateAsync(existing with
         {
-            Content   = content,
-            Embedding = embedding,
-            UpdatedAt = DateTimeOffset.UtcNow
+            Content        = content,
+            Embedding      = embedding,
+            UpdatedAt      = DateTimeOffset.UtcNow,
+            EmbeddingModel = _embeddings.ModelIdentifier
         }, ct);
     }
 
@@ -169,14 +172,15 @@ public sealed class MemoryService : IMemoryService
 
             await _store.AddAsync(new MemoryEntry
             {
-                Id        = Guid.NewGuid().ToString("N"),
-                UserId    = userId,
-                Namespace = @namespace ?? entry.Namespace,
-                Content   = entry.Content,
-                Embedding = embedding,
-                LearnedAt = entry.LearnedAt,
-                UpdatedAt = entry.UpdatedAt,
-                Metadata  = entry.Metadata ?? []
+                Id             = Guid.NewGuid().ToString("N"),
+                UserId         = userId,
+                Namespace      = @namespace ?? entry.Namespace,
+                Content        = entry.Content,
+                Embedding      = embedding,
+                LearnedAt      = entry.LearnedAt,
+                UpdatedAt      = entry.UpdatedAt,
+                Metadata       = entry.Metadata ?? [],
+                EmbeddingModel = _embeddings.ModelIdentifier
             }, ct);
         }
     }
@@ -308,12 +312,13 @@ public sealed class MemoryService : IMemoryService
         var embedding = await _embeddings.EmbedAsync(summaryText, ct);
         await _store.AddAsync(new MemoryEntry
         {
-            Id        = Guid.NewGuid().ToString("N"),
-            UserId    = userId,
-            Content   = $"[Summary] {summaryText}",
-            Embedding = embedding,
-            LearnedAt = DateTimeOffset.UtcNow,
-            Namespace = @namespace,
+            Id             = Guid.NewGuid().ToString("N"),
+            UserId         = userId,
+            Content        = $"[Summary] {summaryText}",
+            Embedding      = embedding,
+            LearnedAt      = DateTimeOffset.UtcNow,
+            Namespace      = @namespace,
+            EmbeddingModel = _embeddings.ModelIdentifier
         }, ct);
 
         foreach (var m in toSummarize)
@@ -358,6 +363,36 @@ public sealed class MemoryService : IMemoryService
         return reply;
     }
 
+    public async Task<int> ReindexAsync(
+        string userId,
+        string? @namespace = null,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default)
+    {
+        var all = await _store.ListAsync(userId, @namespace, ct);
+        var currentModel = _embeddings.ModelIdentifier;
+        int count = 0;
+
+        foreach (var entry in all)
+        {
+            if (entry.EmbeddingModel == currentModel)
+                continue;
+
+            var embedding = await _embeddings.EmbedAsync(entry.Content, ct);
+            await _store.UpdateAsync(entry with
+            {
+                Embedding      = embedding,
+                UpdatedAt      = DateTimeOffset.UtcNow,
+                EmbeddingModel = currentModel
+            }, ct);
+
+            count++;
+            progress?.Report(count);
+        }
+
+        return count;
+    }
+
     public Task MarkVerbatimImportantAsync(string memoryId, CancellationToken ct = default)
         => GetVerbatimStore().UpdateImportanceAsync(memoryId, ImportanceLevels.Important, ct);
 
@@ -391,6 +426,23 @@ public sealed class MemoryService : IMemoryService
         }, ct);
     }
 
+    private void WarnOnModelMismatch(IReadOnlyList<MemoryEntry> results, string userId)
+    {
+        var currentModel = _embeddings.ModelIdentifier;
+        foreach (var m in results)
+        {
+            if (m.EmbeddingModel is null) continue;
+            if (m.EmbeddingModel == currentModel) continue;
+
+            _logger.LogWarning(
+                "Memory {Id} for user {UserId} was embedded with model '{StoredModel}' " +
+                "but the current provider is '{CurrentModel}'. " +
+                "Relevance scores may be meaningless. Call ReindexAsync to re-embed.",
+                m.Id, userId, m.EmbeddingModel, currentModel);
+            break; // one warning per query is enough
+        }
+    }
+
     private static string BuildChatSystemPrompt(IReadOnlyList<MemoryEntry> memories)
     {
         const string basePrompt =
@@ -399,9 +451,10 @@ public sealed class MemoryService : IMemoryService
             "Use memories naturally -- don't recite them verbatim, just let them inform your responses.\n" +
             "If you learn something new about the user, acknowledge it warmly.";
 
-        if (memories.Count == 0) return basePrompt;
-        var memoryBlock = string.Join("\n", memories.Select(m => $"- {m.Content}"));
-        return $"{basePrompt}\n\nWhat you remember about this user:\n{memoryBlock}";
+        var memoryBlock = MemoryContextBuilder.Build(memories, "What you remember about this user:");
+        return memoryBlock.Length == 0
+            ? basePrompt
+            : $"{basePrompt}\n\n{memoryBlock}";
     }
 
     private IVerbatimStore GetVerbatimStore()

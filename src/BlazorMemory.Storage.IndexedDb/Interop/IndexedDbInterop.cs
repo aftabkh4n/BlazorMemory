@@ -90,7 +90,8 @@ internal sealed class IndexedDbInterop : IAsyncDisposable
         Namespace       = e.Namespace,
         UpdatedAt       = e.UpdatedAt?.ToString("O"),
         Metadata        = e.Metadata,
-        ImportanceScore = e.ImportanceScore
+        ImportanceScore = e.ImportanceScore,
+        EmbeddingModel  = e.EmbeddingModel
     };
 
     private static MemoryEntry FromDto(MemoryEntryDto d) => new()
@@ -104,7 +105,8 @@ internal sealed class IndexedDbInterop : IAsyncDisposable
         UpdatedAt       = d.UpdatedAt is null ? null : DateTimeOffset.Parse(d.UpdatedAt),
         Metadata        = d.Metadata,
         ImportanceScore = d.ImportanceScore,
-        RelevanceScore  = d.RelevanceScore
+        RelevanceScore  = d.RelevanceScore,
+        EmbeddingModel  = d.EmbeddingModel
     };
 
     // ── Disposal ──────────────────────────────────────────────────────────────

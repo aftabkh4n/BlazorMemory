@@ -45,4 +45,7 @@ internal sealed class MemoryEntryDto
     /// </summary>
     [JsonPropertyName("relevanceScore")]
     public float? RelevanceScore { get; set; }
+
+    [JsonPropertyName("embeddingModel")]
+    public string? EmbeddingModel { get; set; }
 }

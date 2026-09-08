@@ -16,6 +16,12 @@ public sealed record MemoryEntry
     public Dictionary<string, string> Metadata { get; init; } = [];
 
     /// <summary>
+    /// The embedding model that produced Embedding, in "provider/model" form.
+    /// Null on memories stored before v1.0.2.
+    /// </summary>
+    public string? EmbeddingModel { get; init; }
+
+    /// <summary>
     /// Importance score from user feedback. 1.0 = neutral (default),
     /// 1.5 = marked important (thumbs up),
     /// 0.3 = marked unimportant (thumbs down).

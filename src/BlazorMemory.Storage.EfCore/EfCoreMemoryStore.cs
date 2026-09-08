@@ -42,6 +42,7 @@ public sealed class EfCoreMemoryStore<TContext> : IMemoryStore
         entity.Namespace       = entry.Namespace;
         entity.UpdatedAt       = entry.UpdatedAt;
         entity.ImportanceScore = entry.ImportanceScore;
+        entity.EmbeddingModel  = entry.EmbeddingModel;
         await _db.SaveChangesAsync(ct);
     }
 
@@ -112,7 +113,8 @@ public sealed class EfCoreMemoryStore<TContext> : IMemoryStore
         Namespace       = m.Namespace,
         LearnedAt       = m.LearnedAt,
         UpdatedAt       = m.UpdatedAt,
-        ImportanceScore = m.ImportanceScore
+        ImportanceScore = m.ImportanceScore,
+        EmbeddingModel  = m.EmbeddingModel
     };
 
     private MemoryEntry ToDomain(MemoryEntryEntity e) => new()
@@ -125,7 +127,8 @@ public sealed class EfCoreMemoryStore<TContext> : IMemoryStore
         Namespace       = e.Namespace,
         LearnedAt       = e.LearnedAt,
         UpdatedAt       = e.UpdatedAt,
-        ImportanceScore = e.ImportanceScore
+        ImportanceScore = e.ImportanceScore,
+        EmbeddingModel  = e.EmbeddingModel
     };
 
     // Semicolon separator avoids ambiguity with decimal-comma locales.

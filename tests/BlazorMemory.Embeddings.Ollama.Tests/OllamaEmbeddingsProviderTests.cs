@@ -80,6 +80,28 @@ public class OllamaEmbeddingsProviderTests
 
         provider.Dimensions.Should().Be(1024);
     }
+
+    [Fact]
+    public void ModelIdentifier_ReturnsOllamaPrefix_AndConfiguredModel()
+    {
+        var provider = Build(
+            "{}",
+            new OllamaEmbeddingsOptions { Model = "nomic-embed-text" },
+            out _);
+
+        provider.ModelIdentifier.Should().Be("ollama/nomic-embed-text");
+    }
+
+    [Fact]
+    public void ModelIdentifier_ReflectsCustomModel()
+    {
+        var provider = Build(
+            "{}",
+            new OllamaEmbeddingsOptions { Model = "mxbai-embed-large" },
+            out _);
+
+        provider.ModelIdentifier.Should().Be("ollama/mxbai-embed-large");
+    }
 }
 
 /// <summary>Test double that captures the last outgoing HTTP request.</summary>

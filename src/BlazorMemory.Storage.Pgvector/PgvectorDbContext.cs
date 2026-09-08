@@ -54,6 +54,7 @@ public static class PgvectorModelBuilderExtensions
             entity.Property(e => e.Content).IsRequired();
             entity.Property(e => e.MetadataJson).HasDefaultValue("{}");
             entity.Property(e => e.ImportanceScore).HasDefaultValue(1.0f);
+            entity.Property(e => e.EmbeddingModel).HasMaxLength(128);
 
             // Native pgvector column
             entity.Property(e => e.Embedding)

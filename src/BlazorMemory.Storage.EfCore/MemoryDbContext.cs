@@ -56,6 +56,7 @@ public static class ModelBuilderExtensions
             entity.Property(e => e.EmbeddingJson).IsRequired();
             entity.Property(e => e.MetadataJson).HasDefaultValue("{}");
             entity.Property(e => e.ImportanceScore).HasDefaultValue(1.0f);
+            entity.Property(e => e.EmbeddingModel).HasMaxLength(128);
 
             // Index on UserId for fast per-user queries
             entity.HasIndex(e => e.UserId).HasDatabaseName("IX_Memories_UserId");

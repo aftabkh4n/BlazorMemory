@@ -14,6 +14,8 @@ public sealed class AzureOpenAiEmbeddingsProvider : IEmbeddingsProvider
 
     public int Dimensions => _options.Dimensions;
 
+    public string ModelIdentifier => $"azure/{_options.DeploymentName}";
+
     public AzureOpenAiEmbeddingsProvider(HttpClient http, IOptions<AzureOpenAiEmbeddingsOptions> options)
     {
         _options = options.Value;
