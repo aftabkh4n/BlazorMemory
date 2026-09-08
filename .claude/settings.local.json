@@ -22,7 +22,9 @@
       "Bash(grep -E \"^\\\\+.*['\\\\\"][a-z]{2}-[a-zA-Z0-9]{20,}['\\\\\"]\")",
       "Bash(grep -iE \"\\\\.env$|secrets\\\\.json$|appsettings\\\\.Development\")",
       "Bash(awk -F'Passed: ' '{print $2}')",
-      "Bash(awk -F',' '{sum += $1} END {print \"Total passing: \" sum}')"
+      "Bash(awk -F',' '{sum += $1} END {print \"Total passing: \" sum}')",
+      "Bash(xargs sed -i 's/<Version>1\\\\.0\\\\.1<\\\\/Version>/<Version>1.0.2<\\\\/Version>/g')",
+      "Bash(git commit *)"
     ]
   }
 }
