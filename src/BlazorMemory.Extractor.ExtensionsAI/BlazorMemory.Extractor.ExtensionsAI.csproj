@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>BlazorMemory.Extractor.ExtensionsAI</PackageId>
+    <Version>1.1.0</Version>
+    <Description>Microsoft.Extensions.AI extractor bridge for BlazorMemory. Wraps any IChatClient so BlazorMemory can extract and consolidate memories with OpenAI, Azure OpenAI, Ollama, Anthropic, or any provider that ships an MEAI implementation.</Description>
+    <PackageTags>blazor;ai;memory;extraction;llm;microsoft-extensions-ai;persistent-memory;ai-agent;aspnetcore</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="9.9.1" />
+  </ItemGroup>
+</Project>

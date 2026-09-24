@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>BlazorMemory.Embeddings.ExtensionsAI</PackageId>
+    <Version>1.1.0</Version>
+    <Description>Microsoft.Extensions.AI embeddings bridge for BlazorMemory. Wraps any IEmbeddingGenerator&lt;string, Embedding&lt;float&gt;&gt; so BlazorMemory can use Ollama, OpenAI, Azure OpenAI, or any provider that ships an MEAI implementation.</Description>
+    <PackageTags>blazor;ai;memory;embeddings;microsoft-extensions-ai;persistent-memory;ai-agent;aspnetcore</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="9.9.1" />
+  </ItemGroup>
+</Project>
