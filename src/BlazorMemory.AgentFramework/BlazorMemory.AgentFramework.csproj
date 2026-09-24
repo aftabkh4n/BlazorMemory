@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>BlazorMemory.AgentFramework</PackageId>
+    <Version>1.1.0</Version>
+    <Description>Microsoft Agent Framework long-term memory provider for BlazorMemory. Plug BlazorMemory into any AIAgent as an AIContextProvider so agents recall facts across runs.</Description>
+    <PackageTags>blazor;ai;memory;agent-framework;microsoft-agents-ai;context-provider;persistent-memory;ai-agent;aspnetcore</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
+    <PackageReference Include="Microsoft.Agents.AI" Version="1.22.0" />
+  </ItemGroup>
+</Project>
