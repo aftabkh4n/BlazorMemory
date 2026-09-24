@@ -1,7 +1,10 @@
 using BlazorMemory.Core.Abstractions;
 using BlazorMemory.Core.Engine;
+using BlazorMemory.Core.Models;
 using BlazorMemory.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace BlazorMemory.Core.Extensions;
 
@@ -57,6 +60,42 @@ public sealed class BlazorMemoryBuilder
         Services.AddScoped<IAgentMemoryServiceFactory, AgentMemoryServiceFactory>();
         return this;
     }
+
+    /// <summary>
+    /// Configures extraction dispatch behaviour (mode and inline timeout).
+    /// Defaults are <see cref="ExtractionMode.Inline"/> with a 30 second timeout.
+    /// </summary>
+    public BlazorMemoryBuilder ConfigureExtraction(Action<ExtractionOptions> configure)
+    {
+        Services.RemoveAll<ExtractionOptions>();
+        var options = new ExtractionOptions();
+        configure(options);
+        Services.AddSingleton(options);
+        return this;
+    }
+
+    /// <summary>
+    /// Switches extraction to <see cref="ExtractionMode.Background"/>, wiring
+    /// <see cref="ChannelMemoryExtractionQueue"/> and a <see cref="MemoryExtractionWorker"/>
+    /// hosted service. The queue is bounded and drops rather than blocks when full.
+    /// <para>
+    /// NOTE: Requires a host that runs <see cref="Microsoft.Extensions.Hosting.IHostedService"/>
+    /// implementations (ASP.NET Core, worker services, .NET generic host). Blazor
+    /// WebAssembly does not run hosted services, so WASM apps must stay on
+    /// <see cref="ExtractionMode.Inline"/>.
+    /// </para>
+    /// </summary>
+    public BlazorMemoryBuilder UseBackgroundExtraction(Action<ExtractionOptions>? configure = null)
+    {
+        Services.RemoveAll<ExtractionOptions>();
+        var options = new ExtractionOptions { Mode = ExtractionMode.Background };
+        configure?.Invoke(options);
+        options.Mode = ExtractionMode.Background;
+        Services.AddSingleton(options);
+        Services.AddSingleton<IMemoryExtractionQueue, ChannelMemoryExtractionQueue>();
+        Services.AddHostedService<MemoryExtractionWorker>();
+        return this;
+    }
 }
 
 /// <summary>
@@ -79,6 +118,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ExtractionEngine>();
         services.AddScoped<IMemoryService, MemoryService>();
+        services.TryAddSingleton<ExtractionOptions>();
         return new BlazorMemoryBuilder(services);
     }
 }

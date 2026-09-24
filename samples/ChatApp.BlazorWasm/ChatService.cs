@@ -79,7 +79,7 @@ public sealed class ChatService
         var verbatim = await _memory.SearchVerbatimAsync(UserId, userMessage, QueryLimit, ct);
         var systemPrompt = BuildSystemPrompt(verbatim.Select(m => m.Content).ToList());
         var reply = await CallOpenAiAsync(systemPrompt, userMessage, history, ct);
-        _ = TryStoreVerbatimAsync(userMessage, reply);
+        await TryStoreVerbatimAsync(userMessage, reply);
         return reply;
     }
 

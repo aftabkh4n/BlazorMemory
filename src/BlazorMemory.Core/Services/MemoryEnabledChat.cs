@@ -8,6 +8,8 @@ public sealed class MemoryEnabledChat
 {
     private readonly IMemoryService              _memory;
     private readonly ILogger<MemoryEnabledChat>  _logger;
+    private readonly ExtractionOptions           _extractionOptions;
+    private readonly IMemoryExtractionQueue?     _queue;
 
     private const string DefaultBasePrompt =
         "You are a helpful, friendly assistant with persistent memory.\n" +
@@ -18,10 +20,16 @@ public sealed class MemoryEnabledChat
     public QueryOptions QueryOptions   { get; set; } = new();
     public string       BaseSystemPrompt { get; set; } = DefaultBasePrompt;
 
-    public MemoryEnabledChat(IMemoryService memory, ILogger<MemoryEnabledChat> logger)
+    public MemoryEnabledChat(
+        IMemoryService memory,
+        ILogger<MemoryEnabledChat> logger,
+        ExtractionOptions? extractionOptions = null,
+        IMemoryExtractionQueue? queue = null)
     {
-        _memory = memory;
-        _logger = logger;
+        _memory            = memory;
+        _logger            = logger;
+        _extractionOptions = extractionOptions ?? new ExtractionOptions();
+        _queue             = queue;
     }
 
     public async Task<string> ChatAsync(
@@ -39,7 +47,15 @@ public sealed class MemoryEnabledChat
         var systemPrompt = BuildSystemPrompt(memories);
         var reply        = await llmCall(systemPrompt, userMessage);
 
-        await ExtractSafeAsync(userMessage, reply, userId, @namespace, ct);
+        await ExtractionDispatcher.DispatchAsync(
+            _extractionOptions,
+            _queue,
+            _memory,
+            _logger,
+            $"User: {userMessage}\nAssistant: {reply}",
+            userId,
+            @namespace,
+            ct);
 
         return reply;
     }
@@ -50,21 +66,5 @@ public sealed class MemoryEnabledChat
         return memoryBlock.Length == 0
             ? BaseSystemPrompt
             : $"{BaseSystemPrompt}\n\n{memoryBlock}";
-    }
-
-    private async Task ExtractSafeAsync(
-        string userMessage, string reply,
-        string userId, string? @namespace, CancellationToken ct)
-    {
-        try
-        {
-            await _memory.ExtractAsync(
-                $"User: {userMessage}\nAssistant: {reply}",
-                userId, @namespace, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Memory extraction failed after chat.");
-        }
     }
 }

@@ -8,11 +8,13 @@ namespace BlazorMemory.Core.Services;
 
 public sealed class MemoryService : IMemoryService
 {
-    private readonly IMemoryStore           _store;
-    private readonly IVerbatimStore?        _verbatimStore;
-    private readonly IEmbeddingsProvider    _embeddings;
-    private readonly ExtractionEngine       _engine;
-    private readonly ILogger<MemoryService> _logger;
+    private readonly IMemoryStore            _store;
+    private readonly IVerbatimStore?         _verbatimStore;
+    private readonly IEmbeddingsProvider     _embeddings;
+    private readonly ExtractionEngine        _engine;
+    private readonly ILogger<MemoryService>  _logger;
+    private readonly ExtractionOptions       _extractionOptions;
+    private readonly IMemoryExtractionQueue? _extractionQueue;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -26,13 +28,17 @@ public sealed class MemoryService : IMemoryService
         IEmbeddingsProvider embeddings,
         ExtractionEngine engine,
         ILogger<MemoryService> logger,
-        IVerbatimStore? verbatimStore = null)
+        IVerbatimStore? verbatimStore = null,
+        ExtractionOptions? extractionOptions = null,
+        IMemoryExtractionQueue? extractionQueue = null)
     {
-        _store         = store;
-        _verbatimStore = verbatimStore;
-        _embeddings    = embeddings;
-        _engine        = engine;
-        _logger        = logger;
+        _store             = store;
+        _verbatimStore     = verbatimStore;
+        _embeddings        = embeddings;
+        _engine            = engine;
+        _logger            = logger;
+        _extractionOptions = extractionOptions ?? new ExtractionOptions();
+        _extractionQueue   = extractionQueue;
     }
 
     public Task ExtractAsync(
@@ -351,14 +357,15 @@ public sealed class MemoryService : IMemoryService
         var systemPrompt = BuildChatSystemPrompt(memories);
         var reply        = await llmCall(systemPrompt, userMessage);
 
-        try
-        {
-            await ExtractAsync($"User: {userMessage}\nAssistant: {reply}", userId, @namespace, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Memory extraction failed after chat.");
-        }
+        await ExtractionDispatcher.DispatchAsync(
+            _extractionOptions,
+            _extractionQueue,
+            this,
+            _logger,
+            $"User: {userMessage}\nAssistant: {reply}",
+            userId,
+            @namespace,
+            ct);
 
         return reply;
     }
