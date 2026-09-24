@@ -1,0 +1,22 @@
+<Project>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TargetFrameworks Condition="'$(MSBuildProjectName)' != 'ChatApp.BlazorWasm'">net8.0;net10.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <MSExtensionsVersion>8.0.0</MSExtensionsVersion>
+    <AspNetCoreVersion>8.0.0</AspNetCoreVersion>
+    <EFCoreVersion>8.0.4</EFCoreVersion>
+    <NpgsqlEFVersion>8.0.4</NpgsqlEFVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <MSExtensionsVersion>10.0.0</MSExtensionsVersion>
+    <AspNetCoreVersion>10.0.0</AspNetCoreVersion>
+    <EFCoreVersion>10.0.0</EFCoreVersion>
+    <NpgsqlEFVersion>10.0.0</NpgsqlEFVersion>
+  </PropertyGroup>
+</Project>

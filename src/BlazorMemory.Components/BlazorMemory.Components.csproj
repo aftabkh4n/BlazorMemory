@@ -1,12 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <PackageId>BlazorMemory.Components</PackageId>
-    <Version>1.0.2</Version>
+    <Version>1.1.0</Version>
     <Description>Drop-in Blazor UI components for BlazorMemory. Add a memory panel to your app with a single component.</Description>
-    <PackageTags>blazor;ai;memory;components;ui</PackageTags>
+    <PackageTags>blazor;ai;memory;components;ui;persistent-memory;aspnetcore</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/aftabkh4n/BlazorMemory</RepositoryUrl>
   </PropertyGroup>
@@ -14,8 +11,8 @@
     <SupportedPlatform Include="browser" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.0" />
-    <PackageReference Include="Microsoft.JSInterop" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(AspNetCoreVersion)" />
+    <PackageReference Include="Microsoft.JSInterop" Version="$(AspNetCoreVersion)" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />

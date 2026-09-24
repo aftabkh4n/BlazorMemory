@@ -1,15 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
     <PackageId>BlazorMemory.Extractor.AzureOpenAi</PackageId>
-    <Version>1.0.2</Version>
+    <Version>1.1.0</Version>
     <Description>Azure OpenAI-powered fact extractor and memory consolidator for BlazorMemory. Connects to your Azure OpenAI resource using deployment names.</Description>
-    <PackageTags>blazor;ai;memory;azure;openai;extraction;llm</PackageTags>
+    <PackageTags>blazor;ai;memory;azure;openai;extraction;llm;persistent-memory;ai-agent;aspnetcore</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MSExtensionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MSExtensionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="$(MSExtensionsVersion)" />
   </ItemGroup>
 </Project>

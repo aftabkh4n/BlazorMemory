@@ -1,4 +1,6 @@
 <Project>
+  <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props" />
+
   <PropertyGroup>
     <Authors>Aftab</Authors>
     <Company>Aftab</Company>
@@ -11,9 +13,6 @@
     <IncludeSymbols>false</IncludeSymbols>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>blazormemory-icon.png</PackageIcon>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

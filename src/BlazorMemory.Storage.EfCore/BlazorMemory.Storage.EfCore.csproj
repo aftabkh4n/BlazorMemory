@@ -1,17 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
 		<PackageId>BlazorMemory.Storage.EfCore</PackageId>
-		<Version>1.0.2</Version>
+		<Version>1.1.0</Version>
 		<Description>Entity Framework Core storage adapter for BlazorMemory. Supports SQL Server, PostgreSQL, and SQLite for server-side Blazor and ASP.NET Core apps.</Description>
-		<PackageTags>blazor;ai;memory;efcore;postgresql;sqlserver;sqlite</PackageTags>
+		<PackageTags>blazor;ai;memory;efcore;postgresql;sqlserver;sqlite;persistent-memory;ai-agent;aspnetcore</PackageTags>
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\BlazorMemory.Core\BlazorMemory.Core.csproj" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="$(EFCoreVersion)" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="$(EFCoreVersion)" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MSExtensionsVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MSExtensionsVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="$(MSExtensionsVersion)" />
 	</ItemGroup>
 </Project>

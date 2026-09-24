@@ -1,15 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
 		<PackageId>BlazorMemory</PackageId>
-		<Version>1.0.2</Version>
+		<Version>1.1.0</Version>
 		<Description>AI memory layer for .NET — LLM-powered fact extraction, intelligent consolidation, vector search, and staleness scoring. Works in Blazor WASM (browser) or server-side ASP.NET Core.</Description>
-		<PackageTags>blazor;ai;memory;llm;vector;embeddings;wasm;dotnet;openai;anthropic</PackageTags>
+		<PackageTags>blazor;ai;memory;llm;vector;embeddings;wasm;dotnet;openai;anthropic;persistent-memory;ai-agent;aspnetcore;agent-framework;microsoft-extensions-ai</PackageTags>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" Condition="Exists('..\..\assets\icon.png')" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MSExtensionsVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MSExtensionsVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="$(MSExtensionsVersion)" />
 	</ItemGroup>
 </Project>

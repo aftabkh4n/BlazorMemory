@@ -1,10 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
     <PackageId>BlazorMemory.SemanticKernel</PackageId>
-    <Version>1.0.2</Version>
-    <Description>Semantic Kernel IMemoryStore adapter for BlazorMemory. Plug BlazorMemory into any Semantic Kernel pipeline as a first-class memory backend.</Description>
-    <PackageTags>blazor;ai;memory;semantic-kernel;vector-search</PackageTags>
+    <Version>1.1.0</Version>
+    <Description>Legacy Semantic Kernel IMemoryStore adapter for BlazorMemory. Superseded by BlazorMemory.AgentFramework — use that for new work targeting Microsoft Agent Framework.</Description>
+    <PackageTags>blazor;ai;memory;semantic-kernel;vector-search;legacy;persistent-memory</PackageTags>
     <NoWarn>$(NoWarn);SKEXP0001</NoWarn>
   </PropertyGroup>
   <ItemGroup>
