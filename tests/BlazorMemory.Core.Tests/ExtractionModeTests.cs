@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.Testing;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -50,18 +51,25 @@ public class ExtractionModeTests
             ExtractionTimeout = TimeSpan.FromMilliseconds(200)
         };
 
-        var logger = Substitute.For<ILogger<MemoryEnabledChat>>();
-        logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+        var fakeLogger = new FakeLogger<MemoryEnabledChat>();
+        var chat       = new MemoryEnabledChat(memory, fakeLogger, options);
 
-        var chat = new MemoryEnabledChat(memory, logger, options);
-
-        var start = DateTime.UtcNow;
-        var reply = await chat.ChatAsync("hi", "user1", (_, _) => Task.FromResult("hello"));
+        var start   = DateTime.UtcNow;
+        var reply   = await chat.ChatAsync("hi", "user1", (_, _) => Task.FromResult("hello"));
         var elapsed = DateTime.UtcNow - start;
+
+        // Snapshot IMMEDIATELY after await returns. If the dispatcher logs the
+        // timeout only after ChatAsync returns (fire-and-forget), the snapshot
+        // will be empty and this assertion catches the real bug.
+        var records = fakeLogger.Collector.GetSnapshot();
 
         reply.Should().Be("hello");
         elapsed.Should().BeLessThan(TimeSpan.FromSeconds(5),
             "inline mode must honour ExtractionTimeout and not wait 30s");
+
+        records.Should().ContainSingle(r =>
+                r.Level == LogLevel.Warning && r.Message.Contains("timed out"),
+            "the timeout warning must be written before ChatAsync returns");
     }
 
     [Fact]

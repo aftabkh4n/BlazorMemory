@@ -325,11 +325,20 @@ public class ReindexAsyncTests
         await SeedAsync(store, "user1", "ollama/nomic-embed-text", 3);
         var reported = new List<int>();
 
-        await sut.ReindexAsync("user1", progress: new Progress<int>(n => reported.Add(n)));
+        // Progress<T> posts callbacks to captured SynchronizationContext (or
+        // ThreadPool when none is set, as with xUnit), which races the assertion.
+        // Use a synchronous IProgress<int> so Report runs on the caller's thread
+        // and the list is deterministic at await-return.
+        await sut.ReindexAsync("user1", progress: new SyncProgress<int>(reported.Add));
 
-        // Allow event scheduling time for Progress<T> callbacks
-        await Task.Delay(50);
         reported.Should().BeEquivalentTo([1, 2, 3]);
+    }
+
+    private sealed class SyncProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> _callback;
+        public SyncProgress(Action<T> callback) => _callback = callback;
+        public void Report(T value) => _callback(value);
     }
 
     [Fact]
