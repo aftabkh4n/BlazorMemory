@@ -45,6 +45,9 @@ jobs:
           dotnet pack src/BlazorMemory.Extractor.AzureOpenAi/BlazorMemory.Extractor.AzureOpenAi.csproj           --configuration Release --no-build -o ./nupkgs
           dotnet pack src/BlazorMemory.Components/BlazorMemory.Components.csproj                                 --configuration Release --no-build -o ./nupkgs
           dotnet pack src/BlazorMemory.SemanticKernel/BlazorMemory.SemanticKernel.csproj                         --configuration Release --no-build -o ./nupkgs
+          dotnet pack src/BlazorMemory.AgentFramework/BlazorMemory.AgentFramework.csproj                         --configuration Release --no-build -o ./nupkgs
+          dotnet pack src/BlazorMemory.Embeddings.ExtensionsAI/BlazorMemory.Embeddings.ExtensionsAI.csproj       --configuration Release --no-build -o ./nupkgs
+          dotnet pack src/BlazorMemory.Extractor.ExtensionsAI/BlazorMemory.Extractor.ExtensionsAI.csproj         --configuration Release --no-build -o ./nupkgs
 
       - name: Push to NuGet.org
         run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

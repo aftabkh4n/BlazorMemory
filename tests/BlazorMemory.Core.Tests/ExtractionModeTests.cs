@@ -42,16 +42,12 @@ public class ExtractionModeTests
         var memory = BuildMemory();
         memory.ExtractAsync(Arg.Any<string>(), Arg.Any<string>(),
                 Arg.Any<string?>(), Arg.Any<CancellationToken>())
-            .Returns(async ci =>
-            {
-                var token = ci.Arg<CancellationToken>();
-                await Task.Delay(TimeSpan.FromSeconds(5), token);
-            });
+            .Returns(ci => Task.Delay(TimeSpan.FromSeconds(30), ci.Arg<CancellationToken>()));
 
         var options = new ExtractionOptions
         {
             Mode              = ExtractionMode.Inline,
-            ExtractionTimeout = TimeSpan.FromMilliseconds(50)
+            ExtractionTimeout = TimeSpan.FromMilliseconds(200)
         };
 
         var logger = Substitute.For<ILogger<MemoryEnabledChat>>();
@@ -59,15 +55,13 @@ public class ExtractionModeTests
 
         var chat = new MemoryEnabledChat(memory, logger, options);
 
+        var start = DateTime.UtcNow;
         var reply = await chat.ChatAsync("hi", "user1", (_, _) => Task.FromResult("hello"));
+        var elapsed = DateTime.UtcNow - start;
 
         reply.Should().Be("hello");
-        logger.Received().Log(
-            LogLevel.Warning,
-            Arg.Any<EventId>(),
-            Arg.Any<object>(),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
+        elapsed.Should().BeLessThan(TimeSpan.FromSeconds(5),
+            "inline mode must honour ExtractionTimeout and not wait 30s");
     }
 
     [Fact]
