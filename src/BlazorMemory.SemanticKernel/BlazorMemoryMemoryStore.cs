@@ -12,6 +12,7 @@ namespace BlazorMemory.SemanticKernel;
 /// SK collections map to BlazorMemory namespaces; the <paramref name="userId"/>
 /// scopes all operations within the underlying store.
 /// </summary>
+[Obsolete("Semantic Kernel memory is superseded by Microsoft Agent Framework. Use BlazorMemory.AgentFramework.")]
 public sealed class BlazorMemoryMemoryStore : Microsoft.SemanticKernel.Memory.IMemoryStore
 {
     private readonly BMStore _store;
