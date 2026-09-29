@@ -1,0 +1,16 @@
+# Packages that must stay listed and installable.
+# Add new package IDs here in the same commit that publishes them.
+BlazorMemory
+BlazorMemory.Components
+BlazorMemory.Storage.InMemory
+BlazorMemory.Storage.EfCore
+BlazorMemory.Storage.IndexedDb
+BlazorMemory.Storage.Pgvector
+BlazorMemory.Embeddings.OpenAi
+BlazorMemory.Embeddings.Ollama
+BlazorMemory.Embeddings.AzureOpenAi
+BlazorMemory.Extractor.OpenAi
+BlazorMemory.Extractor.Anthropic
+BlazorMemory.Extractor.Ollama
+BlazorMemory.Extractor.AzureOpenAi
+BlazorMemory.SemanticKernel
