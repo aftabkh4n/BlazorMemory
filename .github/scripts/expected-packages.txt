@@ -14,3 +14,6 @@ BlazorMemory.Extractor.Anthropic
 BlazorMemory.Extractor.Ollama
 BlazorMemory.Extractor.AzureOpenAi
 BlazorMemory.SemanticKernel
+BlazorMemory.AgentFramework
+BlazorMemory.Embeddings.ExtensionsAI
+BlazorMemory.Extractor.ExtensionsAI

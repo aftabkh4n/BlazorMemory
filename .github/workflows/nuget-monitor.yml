@@ -38,7 +38,14 @@ jobs:
           git diff --staged --quiet || git commit -m "chore: nuget stats $(date -u +%Y-%m-%d) [skip ci]"
           git push
 
+      - name: Check if today is health-check day
+        id: day
+        run: echo "weekday=$(date -u +%u)" >> "$GITHUB_OUTPUT"
+
+      # Runs Mondays only, or on a manual run. Every run restores all packages
+      # from nuget.org, which counts as downloads, so daily runs inflate stats.
       - name: Verify packages are listed and installable
+        if: steps.day.outputs.weekday == '1' || github.event_name == 'workflow_dispatch'
         run: bash .github/scripts/package-health.sh
 
       - name: Open issue on failure
