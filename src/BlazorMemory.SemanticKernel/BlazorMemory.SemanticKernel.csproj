@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>BlazorMemory.SemanticKernel</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Description>Legacy Semantic Kernel IMemoryStore adapter for BlazorMemory. Superseded by BlazorMemory.AgentFramework — use that for new work targeting Microsoft Agent Framework.</Description>
     <PackageTags>blazor;ai;memory;semantic-kernel;vector-search;legacy;persistent-memory</PackageTags>
     <NoWarn>$(NoWarn);SKEXP0001</NoWarn>
