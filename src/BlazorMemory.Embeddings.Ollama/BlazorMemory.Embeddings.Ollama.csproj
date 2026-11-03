@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>BlazorMemory.Embeddings.Ollama</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Description>Ollama embeddings provider for BlazorMemory. Run local embeddings with nomic-embed-text or any Ollama-hosted model — no API key required.</Description>
     <PackageTags>blazor;ai;memory;ollama;embeddings;local;vector;persistent-memory;ai-agent;aspnetcore</PackageTags>
   </PropertyGroup>

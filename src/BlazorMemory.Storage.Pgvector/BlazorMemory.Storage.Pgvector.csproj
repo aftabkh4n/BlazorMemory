@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>BlazorMemory.Storage.Pgvector</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Description>PostgreSQL pgvector storage adapter for BlazorMemory. Native vector similarity search using the pgvector extension. Faster and more scalable than the EF Core adapter for large datasets.</Description>
     <PackageTags>blazor;ai;memory;postgresql;pgvector;vector-search;persistent-memory;ai-agent;aspnetcore</PackageTags>
   </PropertyGroup>
@@ -11,6 +11,5 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="$(EFCoreVersion)" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(NpgsqlEFVersion)" />
     <PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.2.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MSExtensionsVersion)" />
   </ItemGroup>
 </Project>

@@ -9,8 +9,8 @@
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
     <MSExtensionsVersion>8.0.0</MSExtensionsVersion>
     <AspNetCoreVersion>8.0.0</AspNetCoreVersion>
-    <EFCoreVersion>8.0.4</EFCoreVersion>
-    <NpgsqlEFVersion>8.0.4</NpgsqlEFVersion>
+    <EFCoreVersion>8.0.33</EFCoreVersion>
+    <NpgsqlEFVersion>8.0.11</NpgsqlEFVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>BlazorMemory.Extractor.AzureOpenAi</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Description>Azure OpenAI-powered fact extractor and memory consolidator for BlazorMemory. Connects to your Azure OpenAI resource using deployment names.</Description>
     <PackageTags>blazor;ai;memory;azure;openai;extraction;llm;persistent-memory;ai-agent;aspnetcore</PackageTags>
   </PropertyGroup>
