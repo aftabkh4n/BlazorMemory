@@ -1,0 +1,131 @@
+{
+  "date": "2026-11-12",
+  "packages": [
+    {
+      "id": "BlazorMemory",
+      "version": "1.1.0",
+      "totalDownloads": 4362,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.AgentFramework",
+      "version": "1.1.0",
+      "totalDownloads": 131,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Components",
+      "version": "1.1.0",
+      "totalDownloads": 1699,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Embeddings.AzureOpenAi",
+      "version": "1.1.0",
+      "totalDownloads": 617,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Embeddings.ExtensionsAI",
+      "version": "1.1.0",
+      "totalDownloads": 156,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Embeddings.Ollama",
+      "version": "1.1.0",
+      "totalDownloads": 844,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Embeddings.OpenAi",
+      "version": "1.1.0",
+      "totalDownloads": 1928,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Extractor.Anthropic",
+      "version": "1.1.0",
+      "totalDownloads": 2123,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Extractor.AzureOpenAi",
+      "version": "1.1.0",
+      "totalDownloads": 592,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Extractor.ExtensionsAI",
+      "version": "1.1.0",
+      "totalDownloads": 159,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Extractor.Ollama",
+      "version": "1.1.0",
+      "totalDownloads": 835,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Extractor.OpenAi",
+      "version": "1.1.0",
+      "totalDownloads": 2032,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.SemanticKernel",
+      "version": "1.1.0",
+      "totalDownloads": 781,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Storage.EfCore",
+      "version": "1.1.0",
+      "totalDownloads": 1925,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Storage.InMemory",
+      "version": "1.1.0",
+      "totalDownloads": 1869,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Storage.IndexedDb",
+      "version": "1.1.0",
+      "totalDownloads": 2041,
+      "verified": true
+    },
+    {
+      "id": "BlazorMemory.Storage.Pgvector",
+      "version": "1.1.0",
+      "totalDownloads": 1062,
+      "verified": true
+    },
+    {
+      "id": "ContextOS",
+      "version": "0.2.5",
+      "totalDownloads": 1046,
+      "verified": false
+    },
+    {
+      "id": "IdpPlatform.GitHub",
+      "version": "1.0.0",
+      "totalDownloads": 164,
+      "verified": false
+    },
+    {
+      "id": "InvoiceCore",
+      "version": "0.4.1",
+      "totalDownloads": 806,
+      "verified": false
+    },
+    {
+      "id": "TravelAI.Core",
+      "version": "2.0.1",
+      "totalDownloads": 557,
+      "verified": false
+    }
+  ]
+}
